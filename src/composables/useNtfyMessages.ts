@@ -46,12 +46,10 @@ export async function subscribePush(topics: string[]): Promise<void> {
     applicationServerKey: urlBase64ToUint8Array(vapidKey),
   })
 
-  const payload = { topics, browserSubscription: sub.toJSON() }
-  console.debug('[ntfy webpush PUT]', JSON.stringify(payload))
   const putRes = await fetch(`${NTFY_BASE}/v1/webpush`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ topics, browserSubscription: sub.toJSON() }),
   })
   if (!putRes.ok) {
     const body = await putRes.text()
