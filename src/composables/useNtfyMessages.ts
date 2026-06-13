@@ -1,4 +1,4 @@
-const NTFY_BASE = import.meta.env.VITE_NTFY_BASE_URL as string ?? 'https://ntfy.sh'
+const NTFY_BASE = (import.meta.env.VITE_NTFY_BASE_URL as string | undefined) ?? 'https://ntfy.sh'
 
 export interface NtfyMessage {
   id: string
@@ -24,11 +24,12 @@ export async function fetchMessages(topic: string): Promise<NtfyMessage[]> {
     .reverse()
 }
 
-function urlBase64ToUint8Array(base64: string): Uint8Array {
+function urlBase64ToUint8Array(base64: string): ArrayBuffer {
   const pad = '='.repeat((4 - (base64.length % 4)) % 4)
   const b64 = (base64 + pad).replace(/-/g, '+').replace(/_/g, '/')
   const raw = atob(b64)
-  return new Uint8Array([...raw].map((c) => c.charCodeAt(0)))
+  const arr = new Uint8Array([...raw].map((c) => c.charCodeAt(0)))
+  return arr.buffer as ArrayBuffer
 }
 
 export async function subscribePush(topics: string[]): Promise<void> {
@@ -36,8 +37,8 @@ export async function subscribePush(topics: string[]): Promise<void> {
     throw new Error('Push nicht unterstützt')
   }
   const cfg = await fetch(`${NTFY_BASE}/v1/config`).then((r) => r.json()) as Record<string, unknown>
-  const vapidKey = cfg['web-push-public-key'] as string | undefined
-    ?? cfg['webPushPublicKey'] as string | undefined
+  const vapidKey = (cfg['web-push-public-key'] as string | undefined)
+    ?? (cfg['webPushPublicKey'] as string | undefined)
   if (!vapidKey) throw new Error('Kein VAPID-Key von ntfy')
 
   const reg = await navigator.serviceWorker.ready
