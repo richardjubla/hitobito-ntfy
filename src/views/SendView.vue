@@ -136,10 +136,10 @@ input, textarea, select {
   font-size: .95rem;
   font-family: inherit;
 }
-input:focus, textarea:focus, select:focus { outline: none; border-color: #c8002c; }
+input:focus, textarea:focus, select:focus { outline: none; border-color: #014cbc; }
 .btn-send {
   padding: .7rem 1rem;
-  background: #c8002c;
+  background: #a1090f;
   color: white;
   border: none;
   border-radius: 8px;
@@ -147,7 +147,7 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: #c8002c
   cursor: pointer;
   margin-top: .3rem;
 }
-.btn-send:hover:not(:disabled) { background: #a00022; }
+.btn-send:hover:not(:disabled) { background: #7d070b; }
 .btn-send:disabled { opacity: .6; cursor: not-allowed; }
 .success { color: #2a7d2a; font-size: .9rem; }
 .error { color: #c00; font-size: .9rem; }

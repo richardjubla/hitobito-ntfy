@@ -1,6 +1,7 @@
 <template>
   <div class="page">
     <header>
+      <img src="/logo_jubla.png" alt="JUBLA" class="logo" />
       <h1>Meine Gruppen</h1>
       <button class="btn-logout" @click="logout">Abmelden</button>
     </header>
@@ -98,7 +99,8 @@ header {
   justify-content: space-between;
   margin-bottom: 1.5rem;
 }
-h1 { font-size: 1.4rem; }
+.logo { height: 32px; }
+h1 { font-size: 1.4rem; color: #34363c; }
 .btn-logout {
   background: none;
   border: 1px solid #ccc;
@@ -106,6 +108,7 @@ h1 { font-size: 1.4rem; }
   padding: .4rem .8rem;
   cursor: pointer;
   font-size: .9rem;
+  color: #34363c;
 }
 .btn-logout:hover { background: #f0f0f0; }
 .groups { list-style: none; display: flex; flex-direction: column; gap: 1rem; }
@@ -129,10 +132,10 @@ code { background: #f0f0f0; padding: .1em .4em; border-radius: 4px; font-size: .
   border: none;
   cursor: pointer;
 }
-.btn-messages { background: #2196f3; color: white; }
-.btn-messages:hover { background: #1769aa; }
-.btn-send { background: #c8002c; color: white; }
-.btn-send:hover { background: #a00022; }
+.btn-messages { background: #014cbc; color: white; }
+.btn-messages:hover { background: #013888; }
+.btn-send { background: #a1090f; color: white; }
+.btn-send:hover { background: #7d070b; }
 .no-topic { margin-top: .8rem; font-size: .9rem; color: #888; }
 .status { text-align: center; padding: 3rem; color: #666; }
 .error { color: #c00; padding: 1rem; }

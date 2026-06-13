@@ -114,8 +114,8 @@ code { background: #f0f0f0; padding: .1em .35em; border-radius: 4px; }
 .btn { padding: .45rem .9rem; border-radius: 6px; font-size: .85rem; text-decoration: none; border: none; cursor: pointer; }
 .btn-subscribe { background: #eee; color: #333; }
 .btn-subscribe:hover { background: #ddd; }
-.btn-send { background: #c8002c; color: white; }
-.btn-send:hover { background: #a00022; }
+.btn-send { background: #a1090f; color: white; }
+.btn-send:hover { background: #7d070b; }
 .messages { display: flex; flex-direction: column; gap: .8rem; }
 .msg-card {
   background: white;
@@ -125,7 +125,7 @@ code { background: #f0f0f0; padding: .1em .35em; border-radius: 4px; }
   border-left: 4px solid #ccc;
 }
 .msg-card[data-priority="4"] { border-left-color: #f0a500; }
-.msg-card[data-priority="5"] { border-left-color: #c8002c; }
+.msg-card[data-priority="5"] { border-left-color: #a1090f; }
 .msg-card[data-priority="1"], .msg-card[data-priority="2"] { border-left-color: #aaa; }
 .msg-header { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; margin-bottom: .4rem; }
 .msg-title { font-weight: 600; font-size: .95rem; }

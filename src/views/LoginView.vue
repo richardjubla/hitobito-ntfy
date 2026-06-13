@@ -1,9 +1,9 @@
 <template>
   <div class="login-page">
     <div class="login-card">
-      <div class="logo-placeholder">🏕️</div>
-      <h1>hitobito → ntfy</h1>
-      <p class="subtitle">Push-Benachrichtigungen für JUBLA-Gruppen</p>
+      <img src="/logo_jubla.png" alt="JUBLA" class="logo" />
+      <h1>JUBLA Mitteilungen</h1>
+      <p class="subtitle">Gruppenbenachrichtigungen via ntfy</p>
       <button class="btn-login" :disabled="loading" @click="handleLogin">
         {{ loading ? 'Weiterleitung…' : 'Mit hitobito einloggen' }}
       </button>
@@ -54,13 +54,13 @@ async function handleLogin() {
   text-align: center;
   box-shadow: 0 2px 16px rgba(0,0,0,.1);
 }
-.logo-placeholder { font-size: 3rem; margin-bottom: 1rem; }
-h1 { font-size: 1.5rem; margin-bottom: .4rem; }
+.logo { width: 160px; margin-bottom: 1.2rem; }
+h1 { font-size: 1.5rem; margin-bottom: .4rem; color: #34363c; }
 .subtitle { color: #666; margin-bottom: 1.8rem; font-size: .95rem; }
 .btn-login {
   width: 100%;
   padding: .8rem 1rem;
-  background: #c8002c;
+  background: #014cbc;
   color: white;
   border: none;
   border-radius: 8px;
@@ -68,7 +68,7 @@ h1 { font-size: 1.5rem; margin-bottom: .4rem; }
   cursor: pointer;
   transition: background .15s;
 }
-.btn-login:hover:not(:disabled) { background: #a00022; }
+.btn-login:hover:not(:disabled) { background: #013888; }
 .btn-login:disabled { opacity: .6; cursor: not-allowed; }
 .error { color: #c00; margin-top: .8rem; font-size: .9rem; }
 .hint { margin-top: 1.2rem; color: #888; font-size: .8rem; }
