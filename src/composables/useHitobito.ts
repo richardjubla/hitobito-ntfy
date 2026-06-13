@@ -51,6 +51,7 @@ function parseGroup(data: JsonApiResponse): Group {
     short_name: r.attributes['short_name'] as string | undefined,
     group_type: (r.attributes['group_type'] as string) ?? r.type,
     layer: (r.attributes['layer'] as boolean) ?? false,
+    description: (r.attributes['description'] as string) ?? undefined,
     social_accounts: socialAccounts,
   }
 }

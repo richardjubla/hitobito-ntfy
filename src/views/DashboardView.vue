@@ -34,7 +34,7 @@
         <div v-else class="no-topic">
           Kein ntfy-Thema gesetzt.
           <span v-if="canSend(group.id)">
-            Trage es in hitobito ein: Gruppe → Soziale Medien → Label <code>ntfy</code>
+            Trage es in hitobito ein: Gruppe → Beschreibung → <code>ntfy:thema-name</code>
           </span>
         </div>
       </li>
@@ -60,10 +60,10 @@ const error = ref<string | null>(null)
 const groups = ref<Group[]>([])
 
 function ntfyTopic(group: Group): string | null {
-  const account = group.social_accounts?.find(
-    (a) => a.label.toLowerCase() === 'ntfy',
-  )
-  return account?.name ?? null
+  const account = group.social_accounts?.find((a) => a.label.toLowerCase() === 'ntfy')
+  if (account?.name) return account.name
+  const match = group.description?.match(/ntfy:\s*(\S+)/i)
+  return match?.[1] ?? null
 }
 
 function canSend(groupId: number): boolean {

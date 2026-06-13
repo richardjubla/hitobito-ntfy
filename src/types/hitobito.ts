@@ -30,5 +30,6 @@ export interface Group {
   short_name?: string
   group_type: string
   layer: boolean
+  description?: string
   social_accounts?: SocialAccount[]
 }
