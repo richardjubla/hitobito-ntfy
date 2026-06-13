@@ -4,7 +4,7 @@ const CLIENT_SECRET = import.meta.env.VITE_OAUTH_CLIENT_SECRET as string | undef
 
 function getRedirectUri(): string {
   const base = import.meta.env.BASE_URL ?? '/'
-  return `${window.location.origin}${base}callback`
+  return `${window.location.origin}${base}`
 }
 
 function generateVerifier(): string {
