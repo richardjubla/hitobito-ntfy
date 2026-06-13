@@ -16,25 +16,11 @@ async function apiFetch<T>(path: string, token: string): Promise<T> {
   return response.json() as Promise<T>
 }
 
-// /oauth/profile gibt User + Rollen zurück (mit with_roles Scope)
-// Format: { id, email, name, roles: [{ group_id, role_class_name, ... }] }
-function parseProfile(data: Record<string, unknown>): { person: Person; roles: Role[] } {
-  const person: Person = {
-    id: data['id'] as number,
-    href: '',
-    first_name: ((data['name'] as string) ?? '').split(' ')[0] ?? '',
-    last_name: ((data['name'] as string) ?? '').split(' ').slice(1).join(' '),
-    email: data['email'] as string | undefined,
-    nickname: data['nickname'] as string | null | undefined,
-  }
-  const rawRoles = (data['roles'] as Record<string, unknown>[] | undefined) ?? []
-  const roles: Role[] = rawRoles.map((r) => ({
-    id: String(r['id'] ?? ''),
-    type: (r['role_class_name'] ?? r['name'] ?? '') as string,
-    group_id: r['group_id'] as number,
-    label: r['role_name'] as string | undefined,
-  }))
-  return { person, roles }
+// Dekodiert den JWT Payload ohne Signaturprüfung (nur für öffentliche Claims)
+function decodeJwtPayload(token: string): Record<string, unknown> {
+  const payload = token.split('.')[1]
+  if (!payload) throw new Error('Kein gültiger JWT Token')
+  return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')))
 }
 
 export function useHitobito() {
@@ -46,9 +32,30 @@ export function useHitobito() {
   }
 
   async function fetchMeWithToken(t: string): Promise<{ person: Person; roles: Role[] }> {
-    // /oauth/profile ist CORS-fähig und braucht keinen separaten api-Scope
-    const data = await apiFetch<Record<string, unknown>>('/oauth/profile', t)
-    return parseProfile(data)
+    const claims = decodeJwtPayload(t)
+
+    // hitobito JWT: sub = person ID
+    const personId = Number(claims['sub'])
+    if (!personId) throw new Error('Person-ID nicht im JWT gefunden')
+
+    const person: Person = {
+      id: personId,
+      href: '',
+      first_name: (claims['first_name'] as string | undefined) ?? '',
+      last_name: (claims['last_name'] as string | undefined) ?? '',
+      email: claims['email'] as string | undefined,
+    }
+
+    // Rollen können im JWT enthalten sein (with_roles Scope)
+    const jwtRoles = claims['roles'] as Record<string, unknown>[] | undefined
+    const roles: Role[] = (jwtRoles ?? []).map((r) => ({
+      id: String(r['id'] ?? ''),
+      type: (r['role_class_name'] ?? r['type'] ?? '') as string,
+      group_id: r['group_id'] as number,
+      label: r['role_name'] as string | undefined,
+    }))
+
+    return { person, roles }
   }
 
   async function fetchGroupsWithToken(t: string, personId: number): Promise<Group[]> {
