@@ -12,16 +12,14 @@
           <p class="topic-label">Thema: <code>{{ topic }}</code></p>
         </div>
         <div class="header-actions">
-          <button class="btn btn-push" :class="{ active: pushActive }" @click="togglePush" :disabled="pushLoading">
-            {{ pushLoading ? '…' : pushActive ? '🔔 Aktiv' : '🔕 Push aktivieren' }}
-          </button>
+          <a :href="`${ntfyBase}/${topic}`" target="_blank" rel="noopener" class="btn btn-subscribe">
+            In ntfy abonnieren
+          </a>
           <RouterLink v-if="canSend" :to="`/send/${group.id}`" class="btn btn-send">
             Senden
           </RouterLink>
         </div>
       </header>
-
-      <p v-if="pushError" class="error small">{{ pushError }}</p>
 
       <div class="messages">
         <div v-if="loading" class="status">Lade Nachrichten…</div>
@@ -47,13 +45,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import type { Group } from '../types/hitobito'
-import {
-  fetchMessages,
-  subscribePush,
-  unsubscribePush,
-  isSubscribed,
-  type NtfyMessage,
-} from '../composables/useNtfyMessages'
+import { fetchMessages, NTFY_BASE, type NtfyMessage } from '../composables/useNtfyMessages'
 
 const SEND_ROLE_KEYWORDS = ['leitung', 'vorstand', 'praeses', 'präses']
 
@@ -64,9 +56,7 @@ const group = ref<Group | null>(null)
 const messages = ref<NtfyMessage[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
-const pushActive = ref(false)
-const pushLoading = ref(false)
-const pushError = ref<string | null>(null)
+const ntfyBase = NTFY_BASE
 let refreshTimer: ReturnType<typeof setInterval> | null = null
 
 const topic = computed(() => {
@@ -99,30 +89,8 @@ async function loadMessages() {
   }
 }
 
-async function togglePush() {
-  if (!topic.value) return
-  pushLoading.value = true
-  pushError.value = null
-  try {
-    if (pushActive.value) {
-      await unsubscribePush([topic.value])
-      pushActive.value = false
-    } else {
-      const permission = await Notification.requestPermission()
-      if (permission !== 'granted') throw new Error('Benachrichtigungen nicht erlaubt')
-      await subscribePush([topic.value])
-      pushActive.value = true
-    }
-  } catch (e) {
-    pushError.value = e instanceof Error ? e.message : 'Push fehlgeschlagen'
-  } finally {
-    pushLoading.value = false
-  }
-}
-
 onMounted(async () => {
   group.value = auth.groups.find((g) => g.id === Number(props.groupId)) ?? null
-  pushActive.value = await isSubscribed()
   loading.value = true
   await loadMessages()
   loading.value = false
@@ -144,9 +112,8 @@ h1 { font-size: 1.3rem; }
 code { background: #f0f0f0; padding: .1em .35em; border-radius: 4px; }
 .header-actions { display: flex; gap: .5rem; flex-shrink: 0; }
 .btn { padding: .45rem .9rem; border-radius: 6px; font-size: .85rem; text-decoration: none; border: none; cursor: pointer; }
-.btn-push { background: #eee; color: #333; }
-.btn-push.active { background: #d4edda; color: #155724; }
-.btn-push:disabled { opacity: .6; cursor: not-allowed; }
+.btn-subscribe { background: #eee; color: #333; }
+.btn-subscribe:hover { background: #ddd; }
 .btn-send { background: #c8002c; color: white; }
 .btn-send:hover { background: #a00022; }
 .messages { display: flex; flex-direction: column; gap: .8rem; }
