@@ -28,33 +28,14 @@ export function useHitobito() {
     accessToken: string,
     _idToken?: string,
   ): Promise<{ person: Person; roles: Role[] }> {
-    // Versuche /api/v1/people — mit with_roles Scope gibt hitobito nur den aktuellen User zurück
-    const data = await apiFetch<Record<string, unknown>>('/api/v1/people', accessToken)
-    console.debug('[hitobito] /api/v1/people response keys:', Object.keys(data))
-    console.debug('[hitobito] /api/v1/people response:', JSON.stringify(data).slice(0, 500))
+    // Teste ob CORS für /api/v1/groups überhaupt funktioniert
+    const data = await apiFetch<Record<string, unknown>>('/api/v1/groups', accessToken)
+    console.debug('[hitobito] /api/v1/groups keys:', Object.keys(data))
+    console.debug('[hitobito] /api/v1/groups response:', JSON.stringify(data).slice(0, 800))
 
-    const people = (data['people'] as Record<string, unknown>[] | undefined) ?? []
-    if (people.length === 0) throw new Error('Keine Person im API-Response gefunden')
-
-    const p = people[0] as Record<string, unknown>
-    const person: Person = {
-      id: p['id'] as number,
-      href: (p['href'] as string) ?? '',
-      first_name: (p['first_name'] as string) ?? '',
-      last_name: (p['last_name'] as string) ?? '',
-      email: p['email'] as string | undefined,
-    }
-
-    const linked = data['linked'] as Record<string, unknown> | undefined
-    const rawRoles = (linked?.['roles'] ?? p['roles'] ?? []) as Record<string, unknown>[]
-    const roles: Role[] = rawRoles.map((r) => ({
-      id: String(r['id'] ?? ''),
-      type: (r['role_class_name'] ?? r['type'] ?? '') as string,
-      group_id: r['group_id'] as number,
-      label: (r['label'] ?? r['role_name']) as string | undefined,
-    }))
-
-    return { person, roles }
+    // Platzhalter — wir wollen erst sehen was zurückkommt
+    const person: Person = { id: 0, href: '', first_name: 'Test', last_name: '' }
+    return { person, roles: [] }
   }
 
   async function fetchGroupsWithToken(t: string, personId: number): Promise<Group[]> {
