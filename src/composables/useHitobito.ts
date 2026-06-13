@@ -35,7 +35,6 @@ function parseGroup(data: JsonApiResponse): Group {
 
   const saRel = r.relationships?.['social_accounts']?.data
   const saIds = Array.isArray(saRel) ? saRel.map((x) => x.id) : []
-  console.debug(`[g${r.id}] saIds=${JSON.stringify(saIds)} included=${JSON.stringify(included.map(i=>i.id+'/'+i.type))}`)
   const socialAccounts: SocialAccount[] = included
     .filter((i) => i.type === 'social_accounts' && saIds.includes(i.id))
     .map((sa) => ({
@@ -44,7 +43,6 @@ function parseGroup(data: JsonApiResponse): Group {
       name: sa.attributes['name'] as string,
       public: sa.attributes['public'] as boolean,
     }))
-  console.debug(`[g${r.id}] social_accounts parsed:`, JSON.stringify(socialAccounts))
 
   return {
     id: Number(r.id),
@@ -105,7 +103,13 @@ export function useHitobito() {
     const results = await Promise.all(
       ids.map(async (id) => {
         try {
-          const data = await apiFetch<JsonApiResponse>(`/api/groups/${id}`, t)
+          // Try with include=social_accounts first, fall back without it
+          let data: JsonApiResponse
+          try {
+            data = await apiFetch<JsonApiResponse>(`/api/groups/${id}?include=social_accounts`, t)
+          } catch {
+            data = await apiFetch<JsonApiResponse>(`/api/groups/${id}`, t)
+          }
           return parseGroup(data)
         } catch {
           return null
