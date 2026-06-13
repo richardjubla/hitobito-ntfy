@@ -29,10 +29,12 @@ onMounted(async () => {
   history.replaceState({}, '', window.location.pathname)
 
   try {
-    const token = await exchangeCode(code)
-    const { person, roles } = await hitobito.fetchMeWithToken(token)
-    const groups = await hitobito.fetchGroupsWithToken(token, person.id)
-    auth.setAuth(token, person, roles)
+    const tokenResponse = await exchangeCode(code)
+    const accessToken = tokenResponse['access_token'] as string
+    console.debug('[hitobito] token response:', JSON.stringify(tokenResponse))
+    const { person, roles } = await hitobito.fetchMeWithToken(accessToken)
+    const groups = await hitobito.fetchGroupsWithToken(accessToken, person.id)
+    auth.setAuth(accessToken, person, roles)
     auth.setGroups(groups)
     router.push('/dashboard')
   } catch (e) {

@@ -42,7 +42,7 @@ export function useAuth() {
     window.location.href = `${HITOBITO_URL}/oauth/authorize?${params}`
   }
 
-  async function exchangeCode(code: string): Promise<string> {
+  async function exchangeCode(code: string): Promise<Record<string, unknown>> {
     const verifier = sessionStorage.getItem('pkce_verifier')
     if (!verifier) throw new Error('Kein PKCE Verifier gefunden — bitte neu einloggen')
     sessionStorage.removeItem('pkce_verifier')
@@ -64,7 +64,8 @@ export function useAuth() {
       throw new Error(`Token-Exchange fehlgeschlagen: ${err}`)
     }
     const data = await response.json()
-    return data.access_token as string
+    console.debug('[hitobito] token response keys:', Object.keys(data))
+    return data as Record<string, unknown>
   }
 
   return { login, exchangeCode }
