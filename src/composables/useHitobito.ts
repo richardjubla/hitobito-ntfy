@@ -16,10 +16,9 @@ async function apiFetch<T>(path: string, token: string): Promise<T> {
   return response.json() as Promise<T>
 }
 
-// Dekodiert den JWT Payload ohne Signaturprüfung (nur für öffentliche Claims)
 function decodeJwtPayload(token: string): Record<string, unknown> {
   const payload = token.split('.')[1]
-  if (!payload) throw new Error('Kein gültiger JWT Token')
+  if (!payload) throw new Error('Kein gültiger JWT')
   return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')))
 }
 
@@ -31,12 +30,18 @@ export function useHitobito() {
     return auth.token
   }
 
-  async function fetchMeWithToken(t: string): Promise<{ person: Person; roles: Role[] }> {
-    const claims = decodeJwtPayload(t)
+  async function fetchMeWithToken(
+    _accessToken: string,
+    idToken?: string,
+  ): Promise<{ person: Person; roles: Role[] }> {
+    if (!idToken) throw new Error('Kein id_token — openid Scope fehlt oder nicht unterstützt')
 
-    // hitobito JWT: sub = person ID
+    // id_token ist ein signiertes JWT mit person ID als "sub"
+    const claims = decodeJwtPayload(idToken)
+    console.debug('[hitobito] id_token claims:', claims)
+
     const personId = Number(claims['sub'])
-    if (!personId) throw new Error('Person-ID nicht im JWT gefunden')
+    if (!personId) throw new Error(`Person-ID nicht im id_token gefunden. Claims: ${JSON.stringify(claims)}`)
 
     const person: Person = {
       id: personId,
@@ -46,7 +51,7 @@ export function useHitobito() {
       email: claims['email'] as string | undefined,
     }
 
-    // Rollen können im JWT enthalten sein (with_roles Scope)
+    // Rollen aus id_token (with_roles Scope) oder leer lassen
     const jwtRoles = claims['roles'] as Record<string, unknown>[] | undefined
     const roles: Role[] = (jwtRoles ?? []).map((r) => ({
       id: String(r['id'] ?? ''),
