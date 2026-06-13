@@ -1,5 +1,6 @@
 const HITOBITO_URL = import.meta.env.VITE_HITOBITO_URL as string
 const CLIENT_ID = import.meta.env.VITE_OAUTH_CLIENT_ID as string
+const CLIENT_SECRET = import.meta.env.VITE_OAUTH_CLIENT_SECRET as string | undefined
 
 function getRedirectUri(): string {
   const base = import.meta.env.BASE_URL ?? '/'
@@ -51,6 +52,7 @@ export function useAuth() {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         client_id: CLIENT_ID,
+        ...(CLIENT_SECRET ? { client_secret: CLIENT_SECRET } : {}),
         code,
         code_verifier: verifier,
         grant_type: 'authorization_code',

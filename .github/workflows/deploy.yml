@@ -32,6 +32,7 @@ jobs:
         env:
           VITE_HITOBITO_URL: ${{ vars.VITE_HITOBITO_URL }}
           VITE_OAUTH_CLIENT_ID: ${{ vars.VITE_OAUTH_CLIENT_ID }}
+          VITE_OAUTH_CLIENT_SECRET: ${{ secrets.VITE_OAUTH_CLIENT_SECRET }}
           VITE_NTFY_BASE_URL: ${{ vars.VITE_NTFY_BASE_URL || 'https://ntfy.sh' }}
           VITE_BASE_URL: ${{ vars.VITE_BASE_URL || '/' }}
 
