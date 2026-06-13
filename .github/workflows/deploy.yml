@@ -30,10 +30,10 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          VITE_HITOBITO_URL: ${{ vars.HITOBITO_URL }}
-          VITE_OAUTH_CLIENT_ID: ${{ vars.OAUTH_CLIENT_ID }}
-          VITE_NTFY_BASE_URL: ${{ vars.NTFY_BASE_URL || 'https://ntfy.sh' }}
-          VITE_BASE_URL: ${{ vars.BASE_URL || '/' }}
+          VITE_HITOBITO_URL: ${{ vars.VITE_HITOBITO_URL }}
+          VITE_OAUTH_CLIENT_ID: ${{ vars.VITE_OAUTH_CLIENT_ID }}
+          VITE_NTFY_BASE_URL: ${{ vars.VITE_NTFY_BASE_URL || 'https://ntfy.sh' }}
+          VITE_BASE_URL: ${{ vars.VITE_BASE_URL || '/' }}
 
       - uses: actions/upload-pages-artifact@v3
         with:
