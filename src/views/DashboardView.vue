@@ -61,9 +61,9 @@ const groups = ref<Group[]>([])
 
 function ntfyTopic(group: Group): string | null {
   const account = group.social_accounts?.find(
-    (a) => a.label.toLowerCase() === 'ntfy',
+    (a) => a.name.toLowerCase() === 'ntfy',
   )
-  return account?.name ?? null
+  return account?.label ?? null
 }
 
 function canSend(groupId: number): boolean {

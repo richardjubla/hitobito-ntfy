@@ -64,7 +64,6 @@ export function useAuth() {
       throw new Error(`Token-Exchange fehlgeschlagen: ${err}`)
     }
     const data = await response.json()
-    console.debug('[hitobito] token response keys:', Object.keys(data))
     return data as Record<string, unknown>
   }
 
