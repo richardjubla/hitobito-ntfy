@@ -28,14 +28,19 @@ export function useHitobito() {
     accessToken: string,
     _idToken?: string,
   ): Promise<{ person: Person; roles: Role[] }> {
-    // Teste ob CORS für /api/v1/groups überhaupt funktioniert
-    const data = await apiFetch<Record<string, unknown>>('/api/v1/groups', accessToken)
-    console.debug('[hitobito] /api/v1/groups keys:', Object.keys(data))
-    console.debug('[hitobito] /api/v1/groups response:', JSON.stringify(data).slice(0, 800))
-
-    // Platzhalter — wir wollen erst sehen was zurückkommt
-    const person: Person = { id: 0, href: '', first_name: 'Test', last_name: '' }
-    return { person, roles: [] }
+    // Teste /api/groups (ohne /v1/) — hitobito DeepWiki referenziert diesen Pfad
+    for (const path of ['/api/v1/groups', '/api/groups']) {
+      try {
+        const data = await apiFetch<Record<string, unknown>>(path, accessToken)
+        console.debug(`[hitobito] ${path} OK, keys:`, Object.keys(data))
+        console.debug(`[hitobito] ${path} response:`, JSON.stringify(data).slice(0, 800))
+        const person: Person = { id: 0, href: '', first_name: 'CORS OK', last_name: path }
+        return { person, roles: [] }
+      } catch (e) {
+        console.debug(`[hitobito] ${path} failed:`, e)
+      }
+    }
+    throw new Error('Kein API-Endpunkt erreichbar — CORS nicht konfiguriert auf dieser hitobito-Instanz')
   }
 
   async function fetchGroupsWithToken(t: string, personId: number): Promise<Group[]> {
