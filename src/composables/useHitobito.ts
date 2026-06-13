@@ -35,6 +35,7 @@ function parseGroup(data: JsonApiResponse): Group {
 
   const saRel = r.relationships?.['social_accounts']?.data
   const saIds = Array.isArray(saRel) ? saRel.map((x) => x.id) : []
+  console.debug(`[g${r.id}] saIds=${JSON.stringify(saIds)} included=${JSON.stringify(included.map(i=>i.id+'/'+i.type))}`)
   const socialAccounts: SocialAccount[] = included
     .filter((i) => i.type === 'social_accounts' && saIds.includes(i.id))
     .map((sa) => ({
@@ -43,6 +44,7 @@ function parseGroup(data: JsonApiResponse): Group {
       name: sa.attributes['name'] as string,
       public: sa.attributes['public'] as boolean,
     }))
+  console.debug(`[g${r.id}] social_accounts parsed:`, JSON.stringify(socialAccounts))
 
   return {
     id: Number(r.id),
