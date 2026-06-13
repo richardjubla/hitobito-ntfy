@@ -34,7 +34,7 @@ export function useAuth() {
       client_id: CLIENT_ID,
       redirect_uri: getRedirectUri(),
       response_type: 'code',
-      scope: 'with_roles',
+      scope: 'with_roles groups',
       code_challenge: challenge,
       code_challenge_method: 'S256',
     })
