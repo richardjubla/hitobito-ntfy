@@ -102,7 +102,7 @@ export function useHitobito() {
 
     const results = await Promise.all(
       ids.map((id) =>
-        apiFetch<JsonApiResponse>(`/api/groups/${id}?include=social_accounts`, t)
+        apiFetch<JsonApiResponse>(`/api/groups/${id}`, t)
           .then((data) => parseGroup(data))
           .catch(() => null),
       ),
@@ -119,10 +119,7 @@ export function useHitobito() {
   }
 
   async function fetchGroupDetails(groupId: number): Promise<Group> {
-    const data = await apiFetch<JsonApiResponse>(
-      `/api/groups/${groupId}?include=social_accounts`,
-      token(),
-    )
+    const data = await apiFetch<JsonApiResponse>(`/api/groups/${groupId}`, token())
     return parseGroup(data)
   }
 
