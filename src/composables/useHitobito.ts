@@ -16,12 +16,24 @@ async function apiFetch<T>(path: string, token: string): Promise<T> {
   return response.json() as Promise<T>
 }
 
-function parseMe(data: Record<string, unknown>): { person: Person; roles: Role[] } {
-  // hitobito returns { "people": [{ ..., "links": { "roles": [...] } }], "linked": { "roles": [...] } }
-  const peopleArr = data['people'] as Person[] | undefined
-  const person = peopleArr?.[0] ?? (data as unknown as Person)
-  const linked = data['linked'] as Record<string, unknown> | undefined
-  const roles = (linked?.['roles'] ?? data['roles'] ?? []) as Role[]
+// /oauth/profile gibt User + Rollen zurück (mit with_roles Scope)
+// Format: { id, email, name, roles: [{ group_id, role_class_name, ... }] }
+function parseProfile(data: Record<string, unknown>): { person: Person; roles: Role[] } {
+  const person: Person = {
+    id: data['id'] as number,
+    href: '',
+    first_name: ((data['name'] as string) ?? '').split(' ')[0] ?? '',
+    last_name: ((data['name'] as string) ?? '').split(' ').slice(1).join(' '),
+    email: data['email'] as string | undefined,
+    nickname: data['nickname'] as string | null | undefined,
+  }
+  const rawRoles = (data['roles'] as Record<string, unknown>[] | undefined) ?? []
+  const roles: Role[] = rawRoles.map((r) => ({
+    id: String(r['id'] ?? ''),
+    type: (r['role_class_name'] ?? r['name'] ?? '') as string,
+    group_id: r['group_id'] as number,
+    label: r['role_name'] as string | undefined,
+  }))
   return { person, roles }
 }
 
@@ -34,8 +46,9 @@ export function useHitobito() {
   }
 
   async function fetchMeWithToken(t: string): Promise<{ person: Person; roles: Role[] }> {
-    const data = await apiFetch<Record<string, unknown>>('/api/v1/people/me?include=roles', t)
-    return parseMe(data)
+    // /oauth/profile ist CORS-fähig und braucht keinen separaten api-Scope
+    const data = await apiFetch<Record<string, unknown>>('/oauth/profile', t)
+    return parseProfile(data)
   }
 
   async function fetchGroupsWithToken(t: string, personId: number): Promise<Group[]> {
