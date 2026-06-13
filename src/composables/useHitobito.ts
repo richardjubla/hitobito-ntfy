@@ -104,21 +104,8 @@ export function useHitobito() {
       ids.map(async (id) => {
         try {
           const data = await apiFetch<JsonApiResponse>(`/api/groups/${id}`, t)
-          const group = parseGroup(data)
-          // Social Accounts als Sub-Ressource holen (include= verursacht 500)
-          try {
-            const saData = await apiFetch<JsonApiResponse>(`/api/groups/${id}/social_accounts`, t)
-            const saResources = Array.isArray(saData.data) ? saData.data : [saData.data]
-            group.social_accounts = saResources.map((sa) => ({
-              id: sa.id,
-              label: sa.attributes['label'] as string,
-              name: sa.attributes['name'] as string,
-              public: sa.attributes['public'] as boolean,
-            }))
-          } catch {
-            group.social_accounts = []
-          }
-          return group
+          console.debug(`[hitobito] group ${id} raw:`, JSON.stringify(data).slice(0, 500))
+          return parseGroup(data)
         } catch {
           return null
         }
