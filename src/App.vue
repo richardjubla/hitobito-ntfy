@@ -31,8 +31,7 @@ onMounted(async () => {
   try {
     const tokenResponse = await exchangeCode(code)
     const accessToken = tokenResponse['access_token'] as string
-    const idToken = tokenResponse['id_token'] as string | undefined
-    const { person, roles } = await hitobito.fetchMeWithToken(accessToken, idToken)
+    const { person, roles } = await hitobito.fetchMeWithToken(accessToken)
     const groups = await hitobito.fetchGroupsWithToken(accessToken, person.id)
     auth.setAuth(accessToken, person, roles)
     auth.setGroups(groups)

@@ -31,33 +31,33 @@ export function useHitobito() {
   }
 
   async function fetchMeWithToken(
-    _accessToken: string,
-    idToken?: string,
+    accessToken: string,
+    _idToken?: string,
   ): Promise<{ person: Person; roles: Role[] }> {
-    if (!idToken) throw new Error('Kein id_token — openid Scope fehlt oder nicht unterstützt')
+    // Versuche /api/v1/people — mit with_roles Scope gibt hitobito nur den aktuellen User zurück
+    const data = await apiFetch<Record<string, unknown>>('/api/v1/people', accessToken)
+    console.debug('[hitobito] /api/v1/people response keys:', Object.keys(data))
+    console.debug('[hitobito] /api/v1/people response:', JSON.stringify(data).slice(0, 500))
 
-    // id_token ist ein signiertes JWT mit person ID als "sub"
-    const claims = decodeJwtPayload(idToken)
-    console.debug('[hitobito] id_token claims:', claims)
+    const people = (data['people'] as Record<string, unknown>[] | undefined) ?? []
+    if (people.length === 0) throw new Error('Keine Person im API-Response gefunden')
 
-    const personId = Number(claims['sub'])
-    if (!personId) throw new Error(`Person-ID nicht im id_token gefunden. Claims: ${JSON.stringify(claims)}`)
-
+    const p = people[0] as Record<string, unknown>
     const person: Person = {
-      id: personId,
-      href: '',
-      first_name: (claims['first_name'] as string | undefined) ?? '',
-      last_name: (claims['last_name'] as string | undefined) ?? '',
-      email: claims['email'] as string | undefined,
+      id: p['id'] as number,
+      href: (p['href'] as string) ?? '',
+      first_name: (p['first_name'] as string) ?? '',
+      last_name: (p['last_name'] as string) ?? '',
+      email: p['email'] as string | undefined,
     }
 
-    // Rollen aus id_token (with_roles Scope) oder leer lassen
-    const jwtRoles = claims['roles'] as Record<string, unknown>[] | undefined
-    const roles: Role[] = (jwtRoles ?? []).map((r) => ({
+    const linked = data['linked'] as Record<string, unknown> | undefined
+    const rawRoles = (linked?.['roles'] ?? p['roles'] ?? []) as Record<string, unknown>[]
+    const roles: Role[] = rawRoles.map((r) => ({
       id: String(r['id'] ?? ''),
       type: (r['role_class_name'] ?? r['type'] ?? '') as string,
       group_id: r['group_id'] as number,
-      label: r['role_name'] as string | undefined,
+      label: (r['label'] ?? r['role_name']) as string | undefined,
     }))
 
     return { person, roles }
