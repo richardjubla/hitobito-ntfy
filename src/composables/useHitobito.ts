@@ -97,59 +97,26 @@ export function useHitobito() {
     return { person, roles }
   }
 
-  async function fetchGroupsWithToken(t: string, personId: number, groupIds?: number[]): Promise<Group[]> {
-    // Try one request via session credentials: returns groups + social_accounts
-    // (Bearer token causes 500 on include=social_accounts — hitobito bug)
-    try {
-      const res = await fetch(
-        `${HITOBITO_URL}/api/people/${personId}?include=roles.group.social_accounts`,
-        { credentials: 'include', headers: { Accept: 'application/vnd.api+json' } },
-      )
-      if (!res.ok) throw new Error(`people ${res.status}`)
-      const data = await res.json() as JsonApiResponse
-      const included = data.included ?? []
-
-      const saMap = new Map<string, SocialAccount>()
-      included.filter((i) => i.type === 'social_accounts').forEach((sa) => {
-        saMap.set(sa.id, {
-          id: sa.id,
-          label: sa.attributes['label'] as string,
-          name: sa.attributes['name'] as string,
-          public: sa.attributes['public'] as boolean,
-        })
-      })
-
-      return included
-        .filter((i) => i.type === 'groups')
-        .map((g) => {
-          const saRel = g.relationships?.['social_accounts']?.data
-          const saIds = Array.isArray(saRel) ? saRel.map((x) => x.id) : []
-          return {
-            id: Number(g.id),
-            href: '',
-            name: g.attributes['name'] as string,
-            short_name: g.attributes['short_name'] as string | undefined,
-            group_type: (g.attributes['group_type'] as string) ?? g.type,
-            layer: (g.attributes['layer'] as boolean) ?? false,
-            description: (g.attributes['description'] as string) ?? undefined,
-            social_accounts: saIds.map((id) => saMap.get(id)).filter(Boolean) as SocialAccount[],
-          }
-        })
-    } catch {
-      // Fallback: individual group requests via Bearer token (no social_accounts)
-      const ids = [...new Set(groupIds ?? [])]
-      if (ids.length === 0) return []
-      const results = await Promise.all(
-        ids.map(async (id) => {
+  async function fetchGroupsWithToken(t: string, _personId: number, groupIds?: number[]): Promise<Group[]> {
+    const ids = [...new Set(groupIds ?? [])]
+    if (ids.length === 0) return []
+    const results = await Promise.all(
+      ids.map(async (id) => {
+        try {
+          // Try with social_accounts; fall back to plain if server errors (hitobito bug)
           try {
-            return parseGroup(await apiFetch<JsonApiResponse>(`/api/groups/${id}`, t))
+            return parseGroup(
+              await apiFetch<JsonApiResponse>(`/api/groups/${id}?include=social_accounts`, t),
+            )
           } catch {
-            return null
+            return parseGroup(await apiFetch<JsonApiResponse>(`/api/groups/${id}`, t))
           }
-        }),
-      )
-      return results.filter((g): g is Group => g !== null)
-    }
+        } catch {
+          return null
+        }
+      }),
+    )
+    return results.filter((g): g is Group => g !== null)
   }
 
   async function fetchMe() {
