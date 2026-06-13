@@ -3,6 +3,7 @@ import { useAuthStore } from '../stores/auth'
 import LoginView from '../views/LoginView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import SendView from '../views/SendView.vue'
+import MessagesView from '../views/MessagesView.vue'
 
 const router = createRouter({
   history: createWebHashHistory(import.meta.env.BASE_URL),
@@ -13,6 +14,12 @@ const router = createRouter({
       path: '/dashboard',
       component: DashboardView,
       meta: { requiresAuth: true },
+    },
+    {
+      path: '/messages/:groupId',
+      component: MessagesView,
+      meta: { requiresAuth: true },
+      props: true,
     },
     {
       path: '/send/:groupId',

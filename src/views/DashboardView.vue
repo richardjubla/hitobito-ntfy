@@ -17,17 +17,16 @@
         </div>
 
         <div v-if="ntfyTopic(group)" class="ntfy-section">
-          <p class="topic-label">ntfy-Thema: <code>{{ ntfyTopic(group) }}</code></p>
           <div class="actions">
-            <a :href="subscribeUrl(ntfyTopic(group)!)" target="_blank" class="btn btn-subscribe">
-              Abonnieren
-            </a>
+            <RouterLink :to="`/messages/${group.id}`" class="btn btn-messages">
+              Mitteilungen
+            </RouterLink>
             <RouterLink
               v-if="canSend(group.id)"
               :to="`/send/${group.id}`"
               class="btn btn-send"
             >
-              Nachricht senden
+              Senden
             </RouterLink>
           </div>
         </div>
@@ -46,13 +45,11 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { useNtfy } from '../composables/useNtfy'
 import type { Group } from '../types/hitobito'
 
 const SEND_ROLE_KEYWORDS = ['leitung', 'vorstand', 'praeses', 'präses']
 
 const auth = useAuthStore()
-const { subscribeUrl } = useNtfy()
 const router = useRouter()
 
 const loading = ref(false)
@@ -132,8 +129,8 @@ code { background: #f0f0f0; padding: .1em .4em; border-radius: 4px; font-size: .
   border: none;
   cursor: pointer;
 }
-.btn-subscribe { background: #2196f3; color: white; }
-.btn-subscribe:hover { background: #1769aa; }
+.btn-messages { background: #2196f3; color: white; }
+.btn-messages:hover { background: #1769aa; }
 .btn-send { background: #c8002c; color: white; }
 .btn-send:hover { background: #a00022; }
 .no-topic { margin-top: .8rem; font-size: .9rem; color: #888; }
