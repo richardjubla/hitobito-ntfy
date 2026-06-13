@@ -16,12 +16,6 @@ async function apiFetch<T>(path: string, token: string): Promise<T> {
   return response.json() as Promise<T>
 }
 
-function decodeJwtPayload(token: string): Record<string, unknown> {
-  const payload = token.split('.')[1]
-  if (!payload) throw new Error('Kein gültiger JWT')
-  return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')))
-}
-
 export function useHitobito() {
   const auth = useAuthStore()
 
