@@ -37,10 +37,8 @@ export async function subscribePush(topics: string[]): Promise<void> {
     throw new Error('Push nicht unterstützt')
   }
   const cfg = await fetch(`${NTFY_BASE}/v1/config`).then((r) => r.json()) as Record<string, unknown>
-  console.debug('[ntfy config]', JSON.stringify(cfg))
-  const vapidKey = (cfg['web-push-public-key'] as string | undefined)
-    ?? (cfg['webPushPublicKey'] as string | undefined)
-  if (!vapidKey) throw new Error(`Kein VAPID-Key von ntfy (keys: ${Object.keys(cfg).join(', ')})`)
+  const vapidKey = cfg['web_push_public_key'] as string | undefined
+  if (!vapidKey) throw new Error('Kein VAPID-Key von ntfy')
 
   const reg = await navigator.serviceWorker.ready
   const sub = await reg.pushManager.subscribe({
