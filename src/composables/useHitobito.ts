@@ -104,7 +104,9 @@ export function useHitobito() {
       ids.map(async (id) => {
         try {
           const data = await apiFetch<JsonApiResponse>(`/api/groups/${id}`, t)
-          console.debug(`[hitobito] group ${id} raw:`, JSON.stringify(data).slice(0, 500))
+          const r = Array.isArray(data.data) ? data.data[0] : data.data
+          console.debug(`[hitobito] group ${id} relationships:`, JSON.stringify(r.relationships ?? null))
+          console.debug(`[hitobito] group ${id} included:`, JSON.stringify(data.included ?? null))
           return parseGroup(data)
         } catch {
           return null
