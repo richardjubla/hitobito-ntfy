@@ -32,7 +32,8 @@ onMounted(async () => {
     const tokenResponse = await exchangeCode(code)
     const accessToken = tokenResponse['access_token'] as string
     const { person, roles } = await hitobito.fetchMeWithToken(accessToken)
-    const groups = await hitobito.fetchGroupsWithToken(accessToken, person.id)
+    const groupIds = [...new Set(roles.map((r) => r.group_id).filter(Boolean))]
+    const groups = await hitobito.fetchGroupsWithToken(accessToken, person.id, groupIds)
     auth.setAuth(accessToken, person, roles)
     auth.setGroups(groups)
     router.push('/dashboard')
