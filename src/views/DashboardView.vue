@@ -47,16 +47,17 @@
       <div class="modal" role="dialog" aria-modal="true">
         <h2>Kanal einrichten – {{ setupGroup.name }}</h2>
 
-        <p class="modal-note">Wähle ein Kennwort für diesen Kanal:</p>
-        <input
-          v-model="kennwort"
-          type="password"
-          placeholder="Kennwort…"
-          class="kennwort-input"
-          :disabled="generating"
-          autofocus
-          @keyup.enter="generateEntry"
-        />
+        <form @submit.prevent="generateEntry">
+          <p class="modal-note">Wähle ein Kennwort für diesen Kanal:</p>
+          <input
+            v-model="kennwort"
+            type="password"
+            placeholder="Kennwort…"
+            class="kennwort-input"
+            :disabled="generating"
+            autocomplete="new-password"
+          />
+        </form>
 
         <div v-if="generating" class="modal-generating">Berechne Schlüssel…</div>
 
