@@ -31,7 +31,16 @@
         </label>
         <label>
           Nachricht
-          <textarea v-model="form.message" rows="4" placeholder="Nachrichtentext…" required />
+          <textarea
+            v-model="form.message"
+            rows="4"
+            placeholder="Nachrichtentext…"
+            :maxlength="MAX_MESSAGE"
+            required
+          />
+          <span class="char-count" :class="{ warn: charsLeft <= 50, over: charsLeft < 0 }">
+            {{ charsLeft }} Zeichen übrig
+          </span>
         </label>
         <label>
           Priorität
@@ -47,7 +56,7 @@
         <p v-if="success" class="success">Nachricht erfolgreich gesendet!</p>
         <p v-if="sendError" class="error">{{ sendError }}</p>
 
-        <button type="submit" class="btn-send" :disabled="sending">
+        <button type="submit" class="btn-send" :disabled="sending || charsLeft < 0">
           {{ sending ? 'Sende…' : 'Senden' }}
         </button>
       </form>
@@ -57,6 +66,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+
+const MAX_MESSAGE = 512
 import { useAuthStore } from '../stores/auth'
 import { useHitobito } from '../composables/useHitobito'
 import { useNtfy } from '../composables/useNtfy'
@@ -85,6 +96,7 @@ const topic = computed(() => jublaEntry.value?.topic ?? null)
 const authorized = computed(() => canSendInGroup(auth.roles, Number(props.groupId)))
 
 const form = ref({ title: '', message: '', priority: 3 as 1 | 2 | 3 | 4 | 5 })
+const charsLeft = computed(() => MAX_MESSAGE - form.value.message.length)
 const sending = ref(false)
 const success = ref(false)
 const sendError = ref<string | null>(null)
@@ -156,6 +168,9 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: #014cbc
 }
 .btn-send:hover:not(:disabled) { background: #7d070b; }
 .btn-send:disabled { opacity: .6; cursor: not-allowed; }
+.char-count { font-size: .78rem; color: #999; text-align: right; margin-top: .15rem; }
+.char-count.warn { color: #b85c00; }
+.char-count.over { color: #c00; }
 .success { color: #2a7d2a; font-size: .9rem; }
 .error { color: #c00; font-size: .9rem; }
 .status { text-align: center; padding: 3rem; color: #666; }
