@@ -69,8 +69,7 @@
 
         <template v-if="generatedTopic">
           <p class="modal-note topic-hint">
-            Trage diesen Wert in hitobito ein:<br />
-            Gruppe → Info → Soziale Medien → Bezeichnung <code>ntfy</code>, Wert:
+            Trage diesen Wert in hitobito ein:
           </p>
           <div class="topic-box">
             <code class="topic-value">{{ generatedTopic }}</code>
