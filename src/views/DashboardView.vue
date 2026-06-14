@@ -45,21 +45,30 @@
   <Teleport to="body">
     <div v-if="setupGroup" class="modal-backdrop" @click.self="closeSetup">
       <div class="modal" role="dialog" aria-modal="true">
-        <h2>Kanal einrichten</h2>
-        <p>Ein eindeutiges ntfy-Thema wird generiert und für <strong>{{ setupGroup.name }}</strong> in hitobito gespeichert.</p>
-        <p class="modal-note">Nur Mitglieder mit hitobito-Zugang können den Kanal lesen. Das Thema kann später vom Vorstand zurückgesetzt werden.</p>
-        <div v-if="setupError" class="setup-error">
-          <p class="error">{{ setupError }}</p>
-          <p class="manual-hint">
-            Alternativ manuell in hitobito eintragen:<br />
-            Gruppe → Info → Soziale Medien → Bezeichnung <code>ntfy</code>, Wert = beliebiger Thema-Name
-          </p>
-        </div>
+        <h2>Kanal einrichten – {{ setupGroup.name }}</h2>
+
+        <div v-if="!generatedTopic" class="modal-generating">Generiere Thema…</div>
+
+        <template v-else>
+          <p class="modal-note">Trage dieses Thema in hitobito ein:</p>
+          <p class="modal-note">Gruppe → Info → Soziale Medien → Bezeichnung <code>ntfy</code>, Wert:</p>
+          <div class="topic-box">
+            <code class="topic-value">{{ generatedTopic }}</code>
+            <button class="btn-copy" @click="copyTopic" :title="copied ? 'Kopiert!' : 'Kopieren'">
+              {{ copied ? '✓' : '⎘' }}
+            </button>
+          </div>
+
+          <div v-if="setupLoading" class="modal-saving">Versuche automatisch zu speichern…</div>
+          <div v-else-if="setupSuccess" class="modal-success">Automatisch gespeichert.</div>
+          <div v-else-if="setupError" class="manual-hint">
+            Automatisches Speichern nicht möglich ({{ setupError }}).<br />
+            Bitte oben genanntes Thema manuell in hitobito eintragen.
+          </div>
+        </template>
+
         <div class="modal-actions">
-          <button class="btn-cancel" @click="closeSetup" :disabled="setupLoading">Abbrechen</button>
-          <button class="btn-confirm" @click="confirmSetup" :disabled="setupLoading">
-            {{ setupLoading ? 'Wird eingerichtet…' : 'Einrichten' }}
-          </button>
+          <button class="btn-cancel" @click="closeSetup">Schliessen</button>
         </div>
       </div>
     </div>
@@ -81,8 +90,11 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 const groups = ref<Group[]>([])
 const setupGroup = ref<Group | null>(null)
+const generatedTopic = ref<string | null>(null)
 const setupLoading = ref(false)
+const setupSuccess = ref(false)
 const setupError = ref<string | null>(null)
+const copied = ref(false)
 
 function ntfyTopic(group: Group): string | null {
   const account = group.social_accounts?.find((a) => a.label.toLowerCase() === 'ntfy')
@@ -93,37 +105,45 @@ function canSend(groupId: number): boolean {
   return canSendInGroup(auth.roles, groupId)
 }
 
-function openSetup(group: Group) {
+async function openSetup(group: Group) {
   setupGroup.value = group
+  generatedTopic.value = null
+  setupLoading.value = false
+  setupSuccess.value = false
   setupError.value = null
-}
+  copied.value = false
 
-function closeSetup() {
-  if (setupLoading.value) return
-  setupGroup.value = null
-  setupError.value = null
-}
+  const topic = await generateTopic(group.id)
+  generatedTopic.value = topic
 
-async function confirmSetup() {
-  if (!setupGroup.value || !auth.token) return
+  if (!auth.token) return
   setupLoading.value = true
-  setupError.value = null
   try {
-    const topic = await generateTopic(setupGroup.value.id)
-    const sa = await createSocialAccount(setupGroup.value.id, topic, auth.token)
+    const sa = await createSocialAccount(group.id, topic, auth.token)
     auth.setGroups(
       auth.groups.map((g) =>
-        g.id === setupGroup.value!.id
+        g.id === group.id
           ? { ...g, social_accounts: [...(g.social_accounts ?? []), sa] }
           : g,
       ),
     )
-    setupGroup.value = null
+    setupSuccess.value = true
   } catch (e) {
-    setupError.value = e instanceof Error ? e.message : 'Fehler beim Einrichten'
+    setupError.value = e instanceof Error ? e.message : 'Fehler'
   } finally {
     setupLoading.value = false
   }
+}
+
+function closeSetup() {
+  setupGroup.value = null
+}
+
+async function copyTopic() {
+  if (!generatedTopic.value) return
+  await navigator.clipboard.writeText(generatedTopic.value)
+  copied.value = true
+  setTimeout(() => { copied.value = false }, 2000)
 }
 
 function logout() {
@@ -226,8 +246,21 @@ code { background: #f0f0f0; padding: .1em .4em; border-radius: 4px; font-size: .
 .btn-confirm { padding: .5rem 1rem; background: #014cbc; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: .9rem; }
 .btn-confirm:hover:not(:disabled) { background: #013888; }
 .btn-confirm:disabled, .btn-cancel:disabled { opacity: .6; cursor: not-allowed; }
-.setup-error { margin-top: .6rem; }
-.manual-hint { margin-top: .4rem; font-size: .82rem; color: #666; background: #f5f5f5; padding: .5rem .7rem; border-radius: 6px; }
+.modal-generating { color: #888; font-size: .9rem; margin: .8rem 0; }
+.modal-saving { font-size: .82rem; color: #888; margin-top: .8rem; }
+.modal-success { font-size: .82rem; color: #1a6e1a; margin-top: .8rem; }
+.topic-box {
+  display: flex; align-items: center; gap: .5rem;
+  background: #f0f4ff; border: 1px solid #c0d0f0;
+  border-radius: 6px; padding: .5rem .7rem; margin: .5rem 0 .8rem;
+}
+.topic-value { font-size: .8rem; word-break: break-all; flex: 1; color: #014cbc; }
+.btn-copy {
+  background: none; border: 1px solid #c0d0f0; border-radius: 4px;
+  padding: .2rem .4rem; cursor: pointer; font-size: .9rem; flex-shrink: 0;
+}
+.btn-copy:hover { background: #e0e8ff; }
+.manual-hint { font-size: .82rem; color: #666; background: #fff8e1; border: 1px solid #ffe082; padding: .5rem .7rem; border-radius: 6px; margin-top: .6rem; }
 .status { text-align: center; padding: 3rem; color: #666; }
 .error { color: #c00; padding: 1rem; }
 </style>
