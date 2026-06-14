@@ -61,18 +61,22 @@ export async function unwrapMessage(body: string): Promise<{ groupId: number; pa
   if (s === -1 || e === -1) return null
   const lines = body.slice(s + HEADER.length, e).split('\n')
   let groupId: number | null = null
-  let afterBlank = false
+  let seenHeader = false
+  let inBody = false
   const parts: string[] = []
   let storedCrc: string | null = null
   for (const line of lines) {
     const t = line.trim()
-    if (afterBlank) {
+    if (inBody) {
       if (t.startsWith('=')) storedCrc = t.slice(1)
       else if (t) parts.push(t)
+    } else if (t === '' && seenHeader) {
+      inBody = true
     } else if (t.startsWith('Group:')) {
       groupId = parseInt(t.slice(6).trim(), 10)
-    } else if (t === '') {
-      afterBlank = true
+      seenHeader = true
+    } else if (t) {
+      seenHeader = true
     }
   }
   if (groupId === null || parts.length === 0) return null

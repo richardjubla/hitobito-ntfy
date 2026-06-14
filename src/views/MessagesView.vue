@@ -38,21 +38,16 @@
       <div class="messages">
         <div v-if="loading && messages.length === 0" class="status">Lade Nachrichten…</div>
         <div v-else-if="error && messages.length === 0" class="error">{{ error }}</div>
-        <div v-else-if="messages.length === 0" class="empty">Noch keine Mitteilungen.</div>
+        <div v-else-if="visibleMessages.length === 0" class="empty">Noch keine Mitteilungen.</div>
 
-        <div v-if="loading && messages.length > 0" class="refreshing">Aktualisiere…</div>
+        <div v-if="loading && visibleMessages.length > 0" class="refreshing">Aktualisiere…</div>
 
-        <article v-for="msg in messages" :key="msg.id" class="msg-card" :data-priority="msg.priority ?? 3">
+        <article v-for="msg in visibleMessages" :key="msg.id" class="msg-card" :data-priority="msg.priority ?? 3">
           <div class="msg-header">
             <span class="msg-title">{{ msg.title || 'Mitteilung' }}</span>
             <span class="msg-time">{{ formatTime(msg.time) }}</span>
           </div>
-          <p class="msg-body">
-            <template v-if="isJublaMessage(msg.message)">
-              🔒 {{ decryptedBodies.get(msg.id) ?? '…' }}
-            </template>
-            <template v-else>{{ msg.message }}</template>
-          </p>
+          <p class="msg-body">{{ decryptedBodies.get(msg.id) }}</p>
           <div v-if="msg.tags?.length" class="msg-tags">
             <span v-for="tag in msg.tags" :key="tag" class="tag">{{ tag }}</span>
           </div>
@@ -81,6 +76,9 @@ const error = ref<string | null>(null)
 const ntfyBase = NTFY_BASE
 const infoOpen = ref(false)
 const decryptedBodies = ref<Map<string, string>>(new Map())
+const visibleMessages = computed(() =>
+  messages.value.filter((m) => decryptedBodies.value.has(m.id)),
+)
 let refreshTimer: ReturnType<typeof setInterval> | null = null
 
 const oldestMessage = computed(() =>
@@ -114,10 +112,10 @@ async function decryptAll(msgs: NtfyMessage[]) {
     if (map.has(m.id) || !isJublaMessage(m.message)) continue
     try {
       const wrapped = await unwrapMessage(m.message)
-      if (!wrapped) { map.set(m.id, '🔒 [Prüfsumme ungültig]'); continue }
+      if (!wrapped) continue
       map.set(m.id, await verifyAndDecrypt(wrapped.payload, keys.secretKey, keys.encKey))
-    } catch (e) {
-      map.set(m.id, `🔒 [${e instanceof Error ? e.message : 'Fehler'}]`)
+    } catch {
+      // ungültige Signatur oder Entschlüsselungsfehler → nicht anzeigen
     }
   }
   decryptedBodies.value = map
