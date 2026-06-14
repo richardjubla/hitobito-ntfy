@@ -59,12 +59,6 @@
             </button>
           </div>
 
-          <div v-if="setupLoading" class="modal-saving">Versuche automatisch zu speichern…</div>
-          <div v-else-if="setupSuccess" class="modal-success">Automatisch gespeichert.</div>
-          <div v-else-if="setupError" class="manual-hint">
-            Automatisches Speichern nicht möglich ({{ setupError }}).<br />
-            Bitte oben genanntes Thema manuell in hitobito eintragen.
-          </div>
         </template>
 
         <div class="modal-actions">
@@ -80,7 +74,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { canSendInGroup } from '../composables/useCanSend'
-import { generateTopic, createSocialAccount } from '../composables/useGroupSetup'
+import { generateTopic } from '../composables/useGroupSetup'
 import type { Group } from '../types/hitobito'
 
 const auth = useAuthStore()
@@ -91,9 +85,6 @@ const error = ref<string | null>(null)
 const groups = ref<Group[]>([])
 const setupGroup = ref<Group | null>(null)
 const generatedTopic = ref<string | null>(null)
-const setupLoading = ref(false)
-const setupSuccess = ref(false)
-const setupError = ref<string | null>(null)
 const copied = ref(false)
 
 function ntfyTopic(group: Group): string | null {
@@ -108,31 +99,8 @@ function canSend(groupId: number): boolean {
 async function openSetup(group: Group) {
   setupGroup.value = group
   generatedTopic.value = null
-  setupLoading.value = false
-  setupSuccess.value = false
-  setupError.value = null
   copied.value = false
-
-  const topic = await generateTopic(group.id)
-  generatedTopic.value = topic
-
-  if (!auth.token) return
-  setupLoading.value = true
-  try {
-    const sa = await createSocialAccount(group.id, topic, auth.token)
-    auth.setGroups(
-      auth.groups.map((g) =>
-        g.id === group.id
-          ? { ...g, social_accounts: [...(g.social_accounts ?? []), sa] }
-          : g,
-      ),
-    )
-    setupSuccess.value = true
-  } catch (e) {
-    setupError.value = e instanceof Error ? e.message : 'Fehler'
-  } finally {
-    setupLoading.value = false
-  }
+  generatedTopic.value = await generateTopic(group.id)
 }
 
 function closeSetup() {
@@ -243,12 +211,7 @@ code { background: #f0f0f0; padding: .1em .4em; border-radius: 4px; font-size: .
 .modal-actions { display: flex; gap: .6rem; justify-content: flex-end; margin-top: 1.2rem; }
 .btn-cancel { padding: .5rem 1rem; background: #eee; border: none; border-radius: 6px; cursor: pointer; font-size: .9rem; }
 .btn-cancel:hover:not(:disabled) { background: #ddd; }
-.btn-confirm { padding: .5rem 1rem; background: #014cbc; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: .9rem; }
-.btn-confirm:hover:not(:disabled) { background: #013888; }
-.btn-confirm:disabled, .btn-cancel:disabled { opacity: .6; cursor: not-allowed; }
 .modal-generating { color: #888; font-size: .9rem; margin: .8rem 0; }
-.modal-saving { font-size: .82rem; color: #888; margin-top: .8rem; }
-.modal-success { font-size: .82rem; color: #1a6e1a; margin-top: .8rem; }
 .topic-box {
   display: flex; align-items: center; gap: .5rem;
   background: #f0f4ff; border: 1px solid #c0d0f0;
@@ -260,7 +223,6 @@ code { background: #f0f0f0; padding: .1em .4em; border-radius: 4px; font-size: .
   padding: .2rem .4rem; cursor: pointer; font-size: .9rem; flex-shrink: 0;
 }
 .btn-copy:hover { background: #e0e8ff; }
-.manual-hint { font-size: .82rem; color: #666; background: #fff8e1; border: 1px solid #ffe082; padding: .5rem .7rem; border-radius: 6px; margin-top: .6rem; }
 .status { text-align: center; padding: 3rem; color: #666; }
 .error { color: #c00; padding: 1rem; }
 </style>
