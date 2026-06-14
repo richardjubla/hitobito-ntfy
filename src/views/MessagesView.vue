@@ -13,9 +13,9 @@
           <p class="topic-label">Thema: <code>{{ topic }}</code></p>
         </div>
         <div class="header-actions">
-          <a :href="safeSubscribeUrl" target="_blank" rel="noopener" class="btn btn-subscribe">
+          <button @click="openInNtfy" class="btn btn-subscribe">
             In ntfy abonnieren
-          </a>
+          </button>
           <RouterLink v-if="canSend" :to="`/send/${group.id}`" class="btn btn-send">
             Senden
           </RouterLink>
@@ -102,6 +102,16 @@ const safeSubscribeUrl = computed(() => {
   if (!topic.value) return undefined
   return new URL(`/${topic.value}`, NTFY_BASE).href
 })
+
+function openInNtfy() {
+  const webUrl = safeSubscribeUrl.value
+  if (!webUrl) return
+  const ntfyBase = new URL(NTFY_BASE).host
+  // Try the ntfy custom URL scheme first (opens the app if installed)
+  window.location.href = `ntfy://${ntfyBase}/${topic.value}`
+  // Fall back to browser after 600ms if the app didn't open
+  setTimeout(() => window.open(webUrl, '_blank', 'noopener,noreferrer'), 600)
+}
 
 function formatTime(unix: number): string {
   return new Date(unix * 1000).toLocaleString('de-CH', {
