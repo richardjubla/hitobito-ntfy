@@ -170,7 +170,33 @@ async function copyEntry() {
   setTimeout(() => { copied.value = false }, 2000)
 }
 
+const GROUPS_CACHE_TTL = 15 * 60 * 1000 // 15 Minuten
+
+function cacheKey() {
+  return `jubla_groups_${auth.person?.id ?? 'unknown'}`
+}
+
+function loadGroupsCache(): { groups: Group[]; refreshedAt: number } | null {
+  try {
+    const raw = localStorage.getItem(cacheKey())
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+function saveGroupsCache(g: Group[]) {
+  try {
+    localStorage.setItem(cacheKey(), JSON.stringify({ groups: g, refreshedAt: Date.now() }))
+  } catch {}
+}
+
+function isCacheFresh(cache: { refreshedAt: number } | null): boolean {
+  return cache !== null && Date.now() - cache.refreshedAt < GROUPS_CACHE_TTL
+}
+
 function logout() {
+  try { localStorage.removeItem(cacheKey()) } catch {}
   auth.clear()
   router.push('/login')
 }
@@ -184,6 +210,7 @@ async function refreshGroups() {
     const fresh = await fetchGroups(auth.person.id, ids)
     auth.setGroups(fresh)
     groups.value = fresh
+    saveGroupsCache(fresh)
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Fehler beim Aktualisieren'
   } finally {
@@ -192,8 +219,16 @@ async function refreshGroups() {
 }
 
 onMounted(() => {
-  groups.value = auth.groups
-  refreshGroups()
+  const cache = loadGroupsCache()
+  if (cache?.groups.length) {
+    auth.setGroups(cache.groups)
+    groups.value = cache.groups
+  } else {
+    groups.value = auth.groups
+  }
+  if (!isCacheFresh(cache)) {
+    refreshGroups()
+  }
 })
 </script>
 
