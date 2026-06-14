@@ -69,8 +69,22 @@
 
         <template v-if="generatedTopic">
           <p class="modal-note topic-hint">
-            Trage diesen Wert in hitobito ein:
+            Neuen <strong>Social-Media-Eintrag</strong> für diese Gruppe in der Mitgliederdatenbank anlegen:<br />
+            <span class="modal-path">Gruppe → Info → Bearbeiten → Kontaktangaben → Social Media</span>
           </p>
+
+          <div class="hm-mock">
+            <div class="hm-row">
+              <span class="hm-label">Social Media</span>
+              <div class="hm-fields">
+                <input class="hm-input hm-wide" :value="generatedTopic.slice(0, 26) + '…'" readonly tabindex="-1" />
+                <input class="hm-input hm-narrow" value="ntfy" readonly tabindex="-1" />
+                <label class="hm-check"><input type="checkbox" disabled /> Öffentlich</label>
+              </div>
+            </div>
+            <div class="hm-add">Eintrag hinzufügen</div>
+          </div>
+          <p class="modal-note hm-note">Wert zum Kopieren:</p>
           <div class="topic-box">
             <code class="topic-value">{{ generatedTopic }}</code>
             <button class="btn-copy" @click="copyEntry" :title="copied ? 'Kopiert!' : 'Kopieren'">
@@ -284,7 +298,35 @@ code { background: #f0f0f0; padding: .1em .4em; border-radius: 4px; font-size: .
   font-size: .95rem; font-family: inherit; margin-top: .3rem;
 }
 .kennwort-input:focus { outline: none; border-color: #014cbc; }
-.topic-hint { margin-top: .9rem; }
+.topic-hint { margin-top: .9rem; line-height: 1.5; }
+.modal-path { font-size: .78rem; color: #014cbc; font-style: italic; }
+.hm-mock {
+  border: 1px solid #c8d0e0;
+  border-radius: 6px;
+  padding: .55rem .75rem;
+  background: #f8f9fb;
+  margin: .55rem 0 .2rem;
+  font-size: .77rem;
+}
+.hm-row { display: flex; align-items: flex-start; gap: .5rem; flex-wrap: wrap; }
+.hm-label { min-width: 82px; color: #555; font-weight: 500; padding-top: .25rem; flex-shrink: 0; }
+.hm-fields { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; flex: 1; }
+.hm-input {
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  padding: .18rem .4rem;
+  font-size: .75rem;
+  background: white;
+  color: #444;
+  font-family: monospace;
+  pointer-events: none;
+}
+.hm-wide { width: 150px; }
+.hm-narrow { width: 52px; }
+.hm-check { font-size: .75rem; color: #555; display: flex; align-items: center; gap: .2rem; }
+.hm-check input { pointer-events: none; }
+.hm-add { margin-top: .4rem; padding-left: 90px; color: #014cbc; font-size: .75rem; }
+.hm-note { margin-top: .5rem; }
 .topic-box {
   display: flex; align-items: center; gap: .5rem;
   background: #f0f4ff; border: 1px solid #c0d0f0;
