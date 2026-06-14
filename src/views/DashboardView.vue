@@ -114,7 +114,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useHitobito } from '../composables/useHitobito'
@@ -210,22 +210,29 @@ function logout() {
   router.push('/login')
 }
 
+let refreshController: AbortController | null = null
+
 async function refreshGroups() {
   if (!auth.person || !auth.token) return
+  refreshController?.abort()
+  refreshController = new AbortController()
   refreshing.value = true
   error.value = null
   try {
     const ids = [...new Set(auth.roles.map((r) => r.group_id))]
-    const fresh = await fetchGroups(auth.person.id, ids)
+    const fresh = await fetchGroups(auth.person.id, ids, refreshController.signal)
     auth.setGroups(fresh)
     groups.value = fresh
     saveGroupsCache(fresh)
   } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') return
     error.value = e instanceof Error ? e.message : 'Fehler beim Aktualisieren'
   } finally {
     refreshing.value = false
   }
 }
+
+onUnmounted(() => refreshController?.abort())
 
 onMounted(() => {
   const cache = loadGroupsCache()

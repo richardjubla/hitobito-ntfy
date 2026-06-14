@@ -17,13 +17,14 @@ interface JsonApiResponse {
   included?: JsonApiResource[]
 }
 
-async function apiFetch<T>(path: string, token: string): Promise<T> {
+async function apiFetch<T>(path: string, token: string, signal?: AbortSignal): Promise<T> {
   const response = await fetch(`${HITOBITO_URL}${path}`, {
     headers: {
       Authorization: `Bearer ${token}`,
       Accept: 'application/vnd.api+json',
       'Content-Type': 'application/vnd.api+json',
     },
+    signal,
   })
   if (!response.ok) throw new Error(`hitobito ${response.status}: ${path}`)
   return response.json() as Promise<T>
@@ -98,7 +99,7 @@ export function useHitobito() {
     return { person, roles }
   }
 
-  async function fetchGroupsWithToken(t: string, _personId: number, groupIds?: number[]): Promise<Group[]> {
+  async function fetchGroupsWithToken(t: string, _personId: number, groupIds?: number[], signal?: AbortSignal): Promise<Group[]> {
     const ids = [...new Set(groupIds ?? [])]
     if (ids.length === 0) return []
     const results = await Promise.all(
@@ -107,12 +108,14 @@ export function useHitobito() {
           // Try with social_accounts; fall back to plain if server errors (hitobito bug)
           try {
             return parseGroup(
-              await apiFetch<JsonApiResponse>(`/api/groups/${id}?include=social_accounts`, t),
+              await apiFetch<JsonApiResponse>(`/api/groups/${id}?include=social_accounts`, t, signal),
             )
-          } catch {
-            return parseGroup(await apiFetch<JsonApiResponse>(`/api/groups/${id}`, t))
+          } catch (e) {
+            if (e instanceof DOMException && e.name === 'AbortError') throw e
+            return parseGroup(await apiFetch<JsonApiResponse>(`/api/groups/${id}`, t, signal))
           }
-        } catch {
+        } catch (e) {
+          if (e instanceof DOMException && e.name === 'AbortError') throw e
           return null
         }
       }),
@@ -124,8 +127,8 @@ export function useHitobito() {
     return fetchMeWithToken(token())
   }
 
-  async function fetchGroups(personId: number, groupIds?: number[]) {
-    return fetchGroupsWithToken(token(), personId, groupIds)
+  async function fetchGroups(personId: number, groupIds?: number[], signal?: AbortSignal) {
+    return fetchGroupsWithToken(token(), personId, groupIds, signal)
   }
 
   async function fetchGroupDetails(groupId: number): Promise<Group> {
