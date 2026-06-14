@@ -67,7 +67,7 @@ import { useHitobito } from '../composables/useHitobito'
 import type { Group } from '../types/hitobito'
 import { fetchMessages, loadCachedMessages, NTFY_BASE, type NtfyMessage } from '../composables/useNtfyMessages'
 import { canSendInGroup } from '../composables/useCanSend'
-import { verifyAndDecrypt, unwrapMessage, isJublaMessage } from '../composables/useEncryption'
+import { verifyAndDecrypt, unwrapMessage, isJublaMessage, computeMessageTag } from '../composables/useEncryption'
 import { parseJublaEntry } from '../composables/useGroupSetup'
 
 const props = defineProps<{ groupId: string }>()
@@ -120,12 +120,25 @@ function formatTime(unix: number): string {
   })
 }
 
+async function hasValidTag(tags: string[] | undefined, encKey: Uint8Array, ntfyTime: number): Promise<boolean> {
+  const macTag = tags?.find((t) => t.startsWith('jm'))
+  if (!macTag) return true  // ältere Nachrichten ohne Tag werden akzeptiert
+  const received = macTag.slice(2)
+  const w = Math.floor(ntfyTime / 300)
+  for (const offset of [-1, 0, 1]) {
+    if ((await computeMessageTag(encKey, w + offset)) === received) return true
+  }
+  return false
+}
+
 async function decryptAll(msgs: NtfyMessage[]) {
   const keys = jublaEntry.value
   if (!keys) return
   const map = new Map(decryptedBodies.value)
   for (const m of msgs) {
-    if (map.has(m.id) || !isJublaMessage(m.message)) continue
+    if (map.has(m.id)) continue
+    if (!await hasValidTag(m.tags, keys.encKey, m.time)) continue
+    if (!isJublaMessage(m.message)) continue
     try {
       const wrapped = await unwrapMessage(m.message)
       if (!wrapped) continue

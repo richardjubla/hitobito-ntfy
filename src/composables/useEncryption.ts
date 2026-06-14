@@ -51,6 +51,19 @@ export async function verifyAndDecrypt(
   return new TextDecoder().decode(pt).replace(/\r\n/g, '\n').replace(/\r/g, '\n')
 }
 
+// TOTP-style auth tag: HMAC-SHA256(encKey, 5-min-window) → first 8 bytes, base64url
+export async function computeMessageTag(encKey: Uint8Array, windowTs: number): Promise<string> {
+  const keyBytes = new Uint8Array(encKey).buffer as ArrayBuffer
+  const key = await crypto.subtle.importKey(
+    'raw', keyBytes, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
+  )
+  const mac = new Uint8Array(
+    await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(String(windowTs))),
+  )
+  return btoa(String.fromCharCode(...mac.slice(0, 8)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+}
+
 export async function wrapMessage(b64: string): Promise<string> {
   const crc = await jublaChecksum(b64)
   return `${HEADER}\n\n${b64}\n=${crc}\n${FOOTER}`

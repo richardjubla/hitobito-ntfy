@@ -34,14 +34,26 @@ onMounted(async () => {
     const { person, roles } = await hitobito.fetchMeWithToken(accessToken)
     const groupIds = [...new Set(roles.map((r) => r.group_id).filter(Boolean))]
     const groups = await hitobito.fetchGroupsWithToken(accessToken, person.id, groupIds)
+    // Preserve social_accounts from previous cache for any group the API returned without them
+    let merged = groups
+    try {
+      const raw = localStorage.getItem(`jubla_groups_${person.id}`)
+      const prev: { id: number; social_accounts?: unknown[] }[] = raw ? JSON.parse(raw).groups ?? [] : []
+      merged = groups.map((g) => {
+        if (!(g.social_accounts?.length)) {
+          const old = prev.find((p) => p.id === g.id)
+          if (old?.social_accounts?.length) return { ...g, social_accounts: old.social_accounts as typeof g.social_accounts }
+        }
+        return g
+      })
+    } catch {}
     auth.setAuth(accessToken, person, roles)
-    auth.setGroups(groups)
+    auth.setGroups(merged)
     // Cache groups immediately so DashboardView skips the background refresh
-    // (the refresh fallback fetches without ?include=social_accounts, losing ntfy entries)
     try {
       localStorage.setItem(
         `jubla_groups_${person.id}`,
-        JSON.stringify({ groups, refreshedAt: Date.now() }),
+        JSON.stringify({ groups: merged, refreshedAt: Date.now() }),
       )
     } catch {}
     router.push('/dashboard')

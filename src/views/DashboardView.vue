@@ -220,9 +220,19 @@ async function refreshGroups() {
   try {
     const ids = [...new Set(auth.roles.map((r) => r.group_id))]
     const fresh = await fetchGroups(auth.person.id, ids, refreshController.signal)
-    auth.setGroups(fresh)
-    groups.value = fresh
-    saveGroupsCache(fresh)
+    // When hitobito returns 500 for ?include=social_accounts and the fallback runs,
+    // social_accounts comes back empty. Preserve them from the current display if we had them.
+    const prev = groups.value
+    const merged = fresh.map((g) => {
+      if (!(g.social_accounts?.length)) {
+        const old = prev.find((p) => p.id === g.id)
+        if (old?.social_accounts?.length) return { ...g, social_accounts: old.social_accounts }
+      }
+      return g
+    })
+    auth.setGroups(merged)
+    groups.value = merged
+    saveGroupsCache(merged)
   } catch (e) {
     if (e instanceof DOMException && e.name === 'AbortError') return
     error.value = e instanceof Error ? e.message : 'Fehler beim Aktualisieren'

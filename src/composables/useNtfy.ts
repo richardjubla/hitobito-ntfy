@@ -1,4 +1,4 @@
-import { encryptAndSign, wrapMessage } from './useEncryption'
+import { encryptAndSign, wrapMessage, computeMessageTag } from './useEncryption'
 
 const NTFY_BASE = (import.meta.env.VITE_NTFY_BASE_URL as string | undefined) ?? 'https://ntfy.sh'
 
@@ -20,13 +20,15 @@ export function useNtfy() {
     const wrapper = await wrapMessage(b64)
     const appUrl = `${window.location.origin}${window.location.pathname}#/messages/${groupId}`
     const body = `Diese Mitteilung in der Jubla Mitteilungen App abrufen.\n${wrapper}`
+    const windowTs = Math.floor(Date.now() / 1000 / 300)
+    const authTag = await computeMessageTag(encKey, windowTs)
     const response = await fetch(`${NTFY_BASE}/${topic}`, {
       method: 'POST',
       body,
       headers: {
         Title: msg.title,
         Priority: '3',
-        Tags: (msg.tags ?? ['jubla']).join(','),
+        Tags: ['jubla', `jm${authTag}`].join(','),
         Click: appUrl,
       },
     })
