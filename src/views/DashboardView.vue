@@ -47,18 +47,26 @@
       <div class="modal" role="dialog" aria-modal="true">
         <h2>Kanal einrichten – {{ setupGroup.name }}</h2>
 
-        <div v-if="!generatedTopic" class="modal-generating">Generiere Thema…</div>
+        <p class="modal-note">Wähle ein Kennwort für diesen Kanal:</p>
+        <input
+          v-model="kennwort"
+          type="text"
+          placeholder="Kennwort…"
+          class="kennwort-input"
+          autofocus
+        />
 
-        <template v-else>
-          <p class="modal-note">Trage dieses Thema in hitobito ein:</p>
-          <p class="modal-note">Gruppe → Info → Soziale Medien → Bezeichnung <code>ntfy</code>, Wert:</p>
+        <template v-if="generatedTopic">
+          <p class="modal-note topic-hint">
+            Trage dieses Thema in hitobito ein:<br />
+            Gruppe → Info → Soziale Medien → Bezeichnung <code>ntfy</code>, Wert:
+          </p>
           <div class="topic-box">
             <code class="topic-value">{{ generatedTopic }}</code>
             <button class="btn-copy" @click="copyTopic" :title="copied ? 'Kopiert!' : 'Kopieren'">
               {{ copied ? '✓' : '⎘' }}
             </button>
           </div>
-
         </template>
 
         <div class="modal-actions">
@@ -70,7 +78,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { canSendInGroup } from '../composables/useCanSend'
@@ -85,7 +93,16 @@ const error = ref<string | null>(null)
 const groups = ref<Group[]>([])
 const setupGroup = ref<Group | null>(null)
 const generatedTopic = ref<string | null>(null)
+const kennwort = ref('')
 const copied = ref(false)
+
+watch(kennwort, async (val) => {
+  if (!setupGroup.value || !val.trim()) {
+    generatedTopic.value = null
+    return
+  }
+  generatedTopic.value = await generateTopic(setupGroup.value.id, val)
+})
 
 function ntfyTopic(group: Group): string | null {
   const account = group.social_accounts?.find((a) => a.label.toLowerCase() === 'ntfy')
@@ -96,11 +113,11 @@ function canSend(groupId: number): boolean {
   return canSendInGroup(auth.roles, groupId)
 }
 
-async function openSetup(group: Group) {
+function openSetup(group: Group) {
   setupGroup.value = group
   generatedTopic.value = null
+  kennwort.value = ''
   copied.value = false
-  generatedTopic.value = await generateTopic(group.id)
 }
 
 function closeSetup() {
@@ -211,7 +228,13 @@ code { background: #f0f0f0; padding: .1em .4em; border-radius: 4px; font-size: .
 .modal-actions { display: flex; gap: .6rem; justify-content: flex-end; margin-top: 1.2rem; }
 .btn-cancel { padding: .5rem 1rem; background: #eee; border: none; border-radius: 6px; cursor: pointer; font-size: .9rem; }
 .btn-cancel:hover:not(:disabled) { background: #ddd; }
-.modal-generating { color: #888; font-size: .9rem; margin: .8rem 0; }
+.kennwort-input {
+  width: 100%; box-sizing: border-box;
+  padding: .5rem .7rem; border: 1px solid #ddd; border-radius: 6px;
+  font-size: .95rem; font-family: inherit; margin-top: .3rem;
+}
+.kennwort-input:focus { outline: none; border-color: #014cbc; }
+.topic-hint { margin-top: .9rem; }
 .topic-box {
   display: flex; align-items: center; gap: .5rem;
   background: #f0f4ff; border: 1px solid #c0d0f0;

@@ -47,7 +47,12 @@
             <span class="msg-title">{{ msg.title || 'Mitteilung' }}</span>
             <span class="msg-time">{{ formatTime(msg.time) }}</span>
           </div>
-          <p class="msg-body">{{ msg.message }}</p>
+          <p class="msg-body">
+            <template v-if="isJublaMessage(msg.message)">
+              🔒 {{ decryptedBodies.get(msg.id) ?? '…' }}
+            </template>
+            <template v-else>{{ msg.message }}</template>
+          </p>
           <div v-if="msg.tags?.length" class="msg-tags">
             <span v-for="tag in msg.tags" :key="tag" class="tag">{{ tag }}</span>
           </div>
@@ -63,6 +68,7 @@ import { useAuthStore } from '../stores/auth'
 import type { Group } from '../types/hitobito'
 import { fetchMessages, loadCachedMessages, NTFY_BASE, type NtfyMessage } from '../composables/useNtfyMessages'
 import { canSendInGroup } from '../composables/useCanSend'
+import { deriveKey, decryptText, unwrapMessage, isJublaMessage } from '../composables/useEncryption'
 
 const props = defineProps<{ groupId: string }>()
 const auth = useAuthStore()
@@ -73,6 +79,7 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 const ntfyBase = NTFY_BASE
 const infoOpen = ref(false)
+const decryptedBodies = ref<Map<string, string>>(new Map())
 let refreshTimer: ReturnType<typeof setInterval> | null = null
 
 const oldestMessage = computed(() =>
@@ -93,11 +100,29 @@ function formatTime(unix: number): string {
   })
 }
 
+async function decryptAll(msgs: NtfyMessage[], t: string) {
+  let key: CryptoKey
+  try { key = await deriveKey(t) } catch { return }
+  const map = new Map(decryptedBodies.value)
+  for (const msg of msgs) {
+    if (map.has(msg.id) || !isJublaMessage(msg.message)) continue
+    try {
+      const wrapped = await unwrapMessage(msg.message)
+      map.set(msg.id, wrapped ? await decryptText(wrapped.payload, key) : '🔒 [Prüfsumme ungültig]')
+    } catch {
+      map.set(msg.id, '🔒 [Entschlüsselung fehlgeschlagen]')
+    }
+  }
+  decryptedBodies.value = map
+}
+
 async function loadMessages() {
   if (!topic.value) return
   try {
-    messages.value = await fetchMessages(topic.value)
+    const msgs = await fetchMessages(topic.value)
+    messages.value = msgs
     error.value = null
+    await decryptAll(msgs, topic.value)
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Fehler beim Laden'
   }

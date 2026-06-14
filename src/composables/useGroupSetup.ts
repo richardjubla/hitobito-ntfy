@@ -1,4 +1,4 @@
-export const MANAGED_TOPIC_RE = /^j[0-9a-f]{24}v\d+$/
+export const MANAGED_TOPIC_RE = /^j[0-9a-f]{32}$/
 
 export function isManagedTopic(name: string): boolean {
   return MANAGED_TOPIC_RE.test(name)
@@ -12,23 +12,6 @@ async function sha256Hex(input: string): Promise<string> {
     .join('')
 }
 
-function randomHex16(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(8))
-  return Array.from(bytes)
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('')
+export async function generateTopic(groupId: number, kennwort: string): Promise<string> {
+  return `j${(await sha256Hex(`${groupId}:${kennwort}`)).slice(0, 32)}`
 }
-
-export async function generateTopic(groupId: number): Promise<string> {
-  const gHash8 = (await sha256Hex(String(groupId))).slice(0, 8)
-  return `j${gHash8}${randomHex16()}v1`
-}
-
-export function reinitTopic(currentTopic: string): string {
-  const match = currentTopic.match(/^j([0-9a-f]{8})[0-9a-f]{16}v(\d+)$/)
-  if (!match) throw new Error('Kein managed Topic — Re-Init nicht möglich')
-  const gHash8 = match[1]
-  const counter = parseInt(match[2], 10)
-  return `j${gHash8}${randomHex16()}v${counter + 1}`
-}
-

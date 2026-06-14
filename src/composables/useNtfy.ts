@@ -1,4 +1,6 @@
-const NTFY_BASE = import.meta.env.VITE_NTFY_BASE_URL as string ?? 'https://ntfy.sh'
+import { deriveKey, encryptText, wrapMessage } from './useEncryption'
+
+const NTFY_BASE = (import.meta.env.VITE_NTFY_BASE_URL as string | undefined) ?? 'https://ntfy.sh'
 
 export interface NtfyMessage {
   title: string
@@ -8,10 +10,14 @@ export interface NtfyMessage {
 }
 
 export function useNtfy() {
-  async function sendNotification(topic: string, msg: NtfyMessage): Promise<void> {
+  async function sendNotification(topic: string, groupId: number, msg: NtfyMessage): Promise<void> {
+    const key = await deriveKey(topic)
+    const b64 = await encryptText(msg.message, key)
+    const body = await wrapMessage(groupId, b64)
+
     const response = await fetch(`${NTFY_BASE}/${topic}`, {
       method: 'POST',
-      body: msg.message,
+      body,
       headers: {
         Title: msg.title,
         Priority: String(msg.priority),

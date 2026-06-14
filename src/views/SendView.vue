@@ -83,7 +83,7 @@ async function send() {
   success.value = false
   sendError.value = null
   try {
-    await sendNotification(topic.value, {
+    await sendNotification(topic.value, Number(props.groupId), {
       title: form.value.title,
       message: form.value.message,
       priority: form.value.priority,
