@@ -1,4 +1,5 @@
 import { useAuthStore } from '../stores/auth'
+import { useRouter } from 'vue-router'
 import type { Person, Role, Group, SocialAccount } from '../types/hitobito'
 
 const HITOBITO_URL = import.meta.env.VITE_HITOBITO_URL as string
@@ -26,8 +27,13 @@ async function apiFetch<T>(path: string, token: string, signal?: AbortSignal): P
     },
     signal,
   })
+  if (response.status === 401) throw new TokenExpiredError()
   if (!response.ok) throw new Error(`hitobito ${response.status}: ${path}`)
   return response.json() as Promise<T>
+}
+
+class TokenExpiredError extends Error {
+  constructor() { super('Token abgelaufen') }
 }
 
 function parseGroup(data: JsonApiResponse): Group {
@@ -57,8 +63,19 @@ function parseGroup(data: JsonApiResponse): Group {
   }
 }
 
+export { TokenExpiredError }
+
 export function useHitobito() {
   const auth = useAuthStore()
+  const router = useRouter()
+
+  function handleError(e: unknown): never {
+    if (e instanceof TokenExpiredError) {
+      auth.clear()
+      router.push('/login')
+    }
+    throw e
+  }
 
   function token(): string {
     if (!auth.token) throw new Error('Nicht eingeloggt')
@@ -128,11 +145,12 @@ export function useHitobito() {
   }
 
   async function fetchGroups(personId: number, groupIds?: number[], signal?: AbortSignal) {
-    return fetchGroupsWithToken(token(), personId, groupIds, signal)
+    return fetchGroupsWithToken(token(), personId, groupIds, signal).catch(handleError)
   }
 
   async function fetchGroupDetails(groupId: number): Promise<Group> {
     const data = await apiFetch<JsonApiResponse>(`/api/groups/${groupId}`, token())
+      .catch(handleError)
     return parseGroup(data)
   }
 
