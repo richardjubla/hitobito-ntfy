@@ -12,7 +12,7 @@
           <p class="topic-label">Thema: <code>{{ topic }}</code></p>
         </div>
         <div class="header-actions">
-          <a :href="`${ntfyBase}/${topic}`" target="_blank" rel="noopener" class="btn btn-subscribe">
+          <a :href="safeSubscribeUrl" target="_blank" rel="noopener" class="btn btn-subscribe">
             In ntfy abonnieren
           </a>
           <RouterLink v-if="canSend" :to="`/send/${group.id}`" class="btn btn-send">
@@ -96,6 +96,12 @@ const topic = computed(() => {
 })
 
 const canSend = computed(() => canSendInGroup(auth.roles, Number(props.groupId)))
+
+const safeSubscribeUrl = computed(() => {
+  if (!topic.value) return null
+  const url = new URL(`/${topic.value}`, NTFY_BASE)
+  return url.href
+})
 
 function formatTime(unix: number): string {
   return new Date(unix * 1000).toLocaleString('de-CH', {
