@@ -50,11 +50,15 @@
         <p class="modal-note">Wähle ein Kennwort für diesen Kanal:</p>
         <input
           v-model="kennwort"
-          type="text"
+          type="password"
           placeholder="Kennwort…"
           class="kennwort-input"
+          :disabled="generating"
           autofocus
+          @keyup.enter="generateEntry"
         />
+
+        <div v-if="generating" class="modal-generating">Berechne Schlüssel…</div>
 
         <template v-if="generatedTopic">
           <p class="modal-note topic-hint">
@@ -63,7 +67,7 @@
           </p>
           <div class="topic-box">
             <code class="topic-value">{{ generatedTopic }}</code>
-            <button class="btn-copy" @click="copyTopic" :title="copied ? 'Kopiert!' : 'Kopieren'">
+            <button class="btn-copy" @click="copyEntry" :title="copied ? 'Kopiert!' : 'Kopieren'">
               {{ copied ? '✓' : '⎘' }}
             </button>
           </div>
@@ -71,6 +75,14 @@
 
         <div class="modal-actions">
           <button class="btn-cancel" @click="closeSetup">Schliessen</button>
+          <button
+            v-if="!generatedTopic"
+            class="btn-confirm"
+            :disabled="!kennwort.trim() || generating"
+            @click="generateEntry"
+          >
+            {{ generating ? 'Berechne…' : 'Generieren' }}
+          </button>
         </div>
       </div>
     </div>
@@ -78,7 +90,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { canSendInGroup } from '../composables/useCanSend'
@@ -94,15 +106,8 @@ const groups = ref<Group[]>([])
 const setupGroup = ref<Group | null>(null)
 const generatedTopic = ref<string | null>(null)
 const kennwort = ref('')
+const generating = ref(false)
 const copied = ref(false)
-
-watch(kennwort, async (val) => {
-  if (!setupGroup.value || !val.trim()) {
-    generatedTopic.value = null
-    return
-  }
-  generatedTopic.value = await generateJublaEntry(setupGroup.value.id, val)
-})
 
 function ntfyTopic(group: Group): string | null {
   const account = group.social_accounts?.find((a) => a.label.toLowerCase() === 'ntfy')
@@ -117,6 +122,7 @@ function openSetup(group: Group) {
   setupGroup.value = group
   generatedTopic.value = null
   kennwort.value = ''
+  generating.value = false
   copied.value = false
 }
 
@@ -124,7 +130,17 @@ function closeSetup() {
   setupGroup.value = null
 }
 
-async function copyTopic() {
+async function generateEntry() {
+  if (!setupGroup.value || !kennwort.value.trim() || generating.value) return
+  generating.value = true
+  try {
+    generatedTopic.value = await generateJublaEntry(setupGroup.value.id, kennwort.value)
+  } finally {
+    generating.value = false
+  }
+}
+
+async function copyEntry() {
   if (!generatedTopic.value) return
   await navigator.clipboard.writeText(generatedTopic.value)
   copied.value = true
@@ -228,6 +244,10 @@ code { background: #f0f0f0; padding: .1em .4em; border-radius: 4px; font-size: .
 .modal-actions { display: flex; gap: .6rem; justify-content: flex-end; margin-top: 1.2rem; }
 .btn-cancel { padding: .5rem 1rem; background: #eee; border: none; border-radius: 6px; cursor: pointer; font-size: .9rem; }
 .btn-cancel:hover:not(:disabled) { background: #ddd; }
+.btn-confirm { padding: .5rem 1rem; background: #014cbc; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: .9rem; }
+.btn-confirm:hover:not(:disabled) { background: #013888; }
+.btn-confirm:disabled { opacity: .5; cursor: not-allowed; }
+.modal-generating { font-size: .82rem; color: #888; margin-top: .6rem; }
 .kennwort-input {
   width: 100%; box-sizing: border-box;
   padding: .5rem .7rem; border: 1px solid #ddd; border-radius: 6px;
