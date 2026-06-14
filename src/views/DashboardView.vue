@@ -3,10 +3,16 @@
     <header>
       <img src="/logo_jubla.png" alt="JUBLA" class="logo" />
       <h1>Meine Gruppen</h1>
-      <button class="btn-logout" @click="logout">Abmelden</button>
+      <div class="header-actions">
+        <button class="btn-refresh" @click="refreshGroups" :disabled="refreshing" :title="'Gruppen aktualisieren'">
+          {{ refreshing ? '⟳' : '⟳' }}
+        </button>
+        <button class="btn-logout" @click="logout">Abmelden</button>
+      </div>
     </header>
 
     <div v-if="loading" class="status">Lade Gruppen…</div>
+    <div v-else-if="refreshing && groups.length === 0" class="status">Lade Gruppen…</div>
     <div v-else-if="error" class="error">{{ error }}</div>
     <div v-else-if="groups.length === 0" class="status">Keine Gruppen gefunden.</div>
 
@@ -94,14 +100,17 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useHitobito } from '../composables/useHitobito'
 import { canSendInGroup } from '../composables/useCanSend'
 import { generateJublaEntry, extractTopic } from '../composables/useGroupSetup'
 import type { Group } from '../types/hitobito'
 
 const auth = useAuthStore()
 const router = useRouter()
+const { fetchGroups } = useHitobito()
 
 const loading = ref(false)
+const refreshing = ref(false)
 const error = ref<string | null>(null)
 const groups = ref<Group[]>([])
 const setupGroup = ref<Group | null>(null)
@@ -153,19 +162,25 @@ function logout() {
   router.push('/login')
 }
 
-onMounted(async () => {
-  if (auth.groups.length > 0) {
-    groups.value = auth.groups
-    return
-  }
-  loading.value = true
+async function refreshGroups() {
+  if (!auth.person || !auth.token) return
+  refreshing.value = true
+  error.value = null
   try {
-    groups.value = auth.groups
+    const ids = [...new Set(auth.roles.map((r) => r.group_id))]
+    const fresh = await fetchGroups(auth.person.id, ids)
+    auth.setGroups(fresh)
+    groups.value = fresh
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Fehler beim Laden'
+    error.value = e instanceof Error ? e.message : 'Fehler beim Aktualisieren'
   } finally {
-    loading.value = false
+    refreshing.value = false
   }
+}
+
+onMounted(() => {
+  groups.value = auth.groups
+  refreshGroups()
 })
 </script>
 
@@ -177,8 +192,23 @@ header {
   justify-content: space-between;
   margin-bottom: 1.5rem;
 }
+.header-actions { display: flex; align-items: center; gap: .5rem; }
 .logo { height: 32px; }
 h1 { font-size: 1.4rem; color: #34363c; }
+.btn-refresh {
+  background: none;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: .4rem .65rem;
+  cursor: pointer;
+  font-size: 1rem;
+  color: #555;
+  line-height: 1;
+  transition: transform .3s;
+}
+.btn-refresh:hover:not(:disabled) { background: #f0f0f0; }
+.btn-refresh:disabled { opacity: .5; cursor: not-allowed; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 .btn-logout {
   background: none;
   border: 1px solid #ccc;
