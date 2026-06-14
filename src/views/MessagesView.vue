@@ -63,6 +63,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
+import { useHitobito } from '../composables/useHitobito'
 import type { Group } from '../types/hitobito'
 import { fetchMessages, loadCachedMessages, NTFY_BASE, type NtfyMessage } from '../composables/useNtfyMessages'
 import { canSendInGroup } from '../composables/useCanSend'
@@ -71,6 +72,7 @@ import { parseJublaEntry } from '../composables/useGroupSetup'
 
 const props = defineProps<{ groupId: string }>()
 const auth = useAuthStore()
+const { fetchGroupDetails } = useHitobito()
 
 const group = ref<Group | null>(null)
 const messages = ref<NtfyMessage[]>([])
@@ -149,6 +151,13 @@ async function loadMessages() {
 
 onMounted(async () => {
   group.value = auth.groups.find((g) => g.id === Number(props.groupId)) ?? null
+  if (!group.value) {
+    try {
+      group.value = await fetchGroupDetails(Number(props.groupId))
+    } catch {
+      // Gruppe konnte nicht geladen werden
+    }
+  }
   if (topic.value) {
     messages.value = loadCachedMessages(topic.value)
   }

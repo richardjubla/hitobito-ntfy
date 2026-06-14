@@ -149,9 +149,16 @@ export function useHitobito() {
   }
 
   async function fetchGroupDetails(groupId: number): Promise<Group> {
-    const data = await apiFetch<JsonApiResponse>(`/api/groups/${groupId}`, token())
-      .catch(handleError)
-    return parseGroup(data)
+    try {
+      return parseGroup(
+        await apiFetch<JsonApiResponse>(`/api/groups/${groupId}?include=social_accounts`, token()),
+      )
+    } catch (e) {
+      if (e instanceof TokenExpiredError) handleError(e)
+      return parseGroup(
+        await apiFetch<JsonApiResponse>(`/api/groups/${groupId}`, token()).catch(handleError),
+      )
+    }
   }
 
   return { fetchMe, fetchGroups, fetchGroupDetails, fetchMeWithToken, fetchGroupsWithToken }
