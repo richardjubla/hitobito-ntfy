@@ -12,13 +12,14 @@ export interface NtfyMessage {
 export function useNtfy() {
   async function sendNotification(
     topic: string,
-    groupId: number,
+    _groupId: number,
     secretKey: Uint8Array,
     encKey: Uint8Array,
     msg: NtfyMessage,
   ): Promise<void> {
     const b64 = await encryptAndSign(msg.message.replace(/\r\n/g, '\n').replace(/\r/g, '\n'), secretKey, encKey)
-    const body = await wrapMessage(groupId, b64)
+    const wrapper = await wrapMessage(b64)
+    const body = `Diese Mitteilung in der Jubla Mitteilungen App abrufen.\n${wrapper}`
     const response = await fetch(`${NTFY_BASE}/${topic}`, {
       method: 'POST',
       body,

@@ -51,18 +51,16 @@ export async function verifyAndDecrypt(
   return new TextDecoder().decode(pt).replace(/\r\n/g, '\n').replace(/\r/g, '\n')
 }
 
-export async function wrapMessage(groupId: number, b64: string): Promise<string> {
+export async function wrapMessage(b64: string): Promise<string> {
   const crc = await jublaChecksum(b64)
-  return `${HEADER}\nGroup: ${groupId}\nVersion: 1\n\n${b64}\n=${crc}\n${FOOTER}`
+  return `${HEADER}\n\n${b64}\n=${crc}\n${FOOTER}`
 }
 
-export async function unwrapMessage(body: string): Promise<{ groupId: number; payload: string } | null> {
+export async function unwrapMessage(body: string): Promise<{ payload: string } | null> {
   const s = body.indexOf(HEADER)
   const e = body.indexOf(FOOTER)
   if (s === -1 || e === -1) return null
   const lines = body.slice(s + HEADER.length, e).split('\n')
-  let groupId: number | null = null
-  let seenHeader = false
   let inBody = false
   const parts: string[] = []
   let storedCrc: string | null = null
@@ -71,19 +69,14 @@ export async function unwrapMessage(body: string): Promise<{ groupId: number; pa
     if (inBody) {
       if (t.startsWith('=')) storedCrc = t.slice(1)
       else if (t) parts.push(t)
-    } else if (t === '' && seenHeader) {
+    } else if (t === '') {
       inBody = true
-    } else if (t.startsWith('Group:')) {
-      groupId = parseInt(t.slice(6).trim(), 10)
-      seenHeader = true
-    } else if (t) {
-      seenHeader = true
     }
   }
-  if (groupId === null || parts.length === 0) return null
+  if (parts.length === 0) return null
   const payload = parts.join('')
   if (storedCrc !== null && storedCrc !== (await jublaChecksum(payload))) return null
-  return { groupId, payload }
+  return { payload }
 }
 
 export function isJublaMessage(body: string): boolean {
