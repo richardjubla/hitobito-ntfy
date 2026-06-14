@@ -73,7 +73,6 @@ const group = ref<Group | null>(null)
 const messages = ref<NtfyMessage[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
-const ntfyBase = NTFY_BASE
 const infoOpen = ref(false)
 const decryptedBodies = ref<Map<string, string>>(new Map())
 const visibleMessages = computed(() =>
@@ -98,9 +97,8 @@ const topic = computed(() => {
 const canSend = computed(() => canSendInGroup(auth.roles, Number(props.groupId)))
 
 const safeSubscribeUrl = computed(() => {
-  if (!topic.value) return null
-  const url = new URL(`/${topic.value}`, NTFY_BASE)
-  return url.href
+  if (!topic.value) return undefined
+  return new URL(`/${topic.value}`, NTFY_BASE).href
 })
 
 function formatTime(unix: number): string {
