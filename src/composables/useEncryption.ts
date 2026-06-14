@@ -47,7 +47,7 @@ export async function verifyAndDecrypt(
     throw new Error('Ungültige Signatur')
   }
   const pt = sodium.crypto_secretbox_open_easy(payload.slice(nonceLen), payload.slice(0, nonceLen), encKey)
-  return new TextDecoder().decode(pt)
+  return new TextDecoder().decode(pt).replace(/\r\n/g, '\n').replace(/\r/g, '\n')
 }
 
 export async function wrapMessage(groupId: number, b64: string): Promise<string> {

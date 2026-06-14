@@ -17,7 +17,7 @@ export function useNtfy() {
     encKey: Uint8Array,
     msg: NtfyMessage,
   ): Promise<void> {
-    const b64 = await encryptAndSign(msg.message, secretKey, encKey)
+    const b64 = await encryptAndSign(msg.message.replace(/\r\n/g, '\n').replace(/\r/g, '\n'), secretKey, encKey)
     const body = await wrapMessage(groupId, b64)
     const response = await fetch(`${NTFY_BASE}/${topic}`, {
       method: 'POST',
