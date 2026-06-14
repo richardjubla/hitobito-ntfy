@@ -25,8 +25,9 @@ function saveSession(t: string, p: Person, r: Role[]) {
   } catch {}
 }
 
-function clearSession() {
-  try { localStorage.removeItem(SESSION_KEY) } catch {}
+function clearAll() {
+  try { localStorage.clear() } catch {}
+  try { sessionStorage.clear() } catch {}
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -55,7 +56,7 @@ export const useAuthStore = defineStore('auth', () => {
     person.value = null
     roles.value = []
     groups.value = []
-    clearSession()
+    clearAll()
   }
 
   return { token, person, roles, groups, isLoggedIn, setAuth, setGroups, clear }

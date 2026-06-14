@@ -205,7 +205,6 @@ function isCacheFresh(cache: { refreshedAt: number } | null): boolean {
 }
 
 function logout() {
-  try { localStorage.removeItem(cacheKey()) } catch {}
   auth.clear()
   router.push('/login')
 }
