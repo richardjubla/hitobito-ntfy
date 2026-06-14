@@ -46,8 +46,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import type { Group } from '../types/hitobito'
 import { fetchMessages, NTFY_BASE, type NtfyMessage } from '../composables/useNtfyMessages'
-
-const SEND_ROLE_KEYWORDS = ['leitung', 'vorstand', 'praeses', 'präses']
+import { canSendInGroup } from '../composables/useCanSend'
 
 const props = defineProps<{ groupId: string }>()
 const auth = useAuthStore()
@@ -64,13 +63,7 @@ const topic = computed(() => {
   return account?.name?.trim() ?? null
 })
 
-const canSend = computed(() =>
-  auth.roles.some(
-    (r) =>
-      r.group_id === Number(props.groupId) &&
-      SEND_ROLE_KEYWORDS.some((kw) => r.type.toLowerCase().includes(kw)),
-  ),
-)
+const canSend = computed(() => canSendInGroup(auth.roles, Number(props.groupId)))
 
 function formatTime(unix: number): string {
   return new Date(unix * 1000).toLocaleString('de-CH', {

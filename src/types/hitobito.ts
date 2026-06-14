@@ -12,6 +12,7 @@ export interface Role {
   label?: string | null
   created_at?: string
   deleted_at?: string | null
+  permissions?: string[]
 }
 
 export interface Person {

@@ -52,9 +52,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useHitobito } from '../composables/useHitobito'
 import { useNtfy } from '../composables/useNtfy'
+import { canSendInGroup } from '../composables/useCanSend'
 import type { Group } from '../types/hitobito'
-
-const SEND_ROLE_KEYWORDS = ['leitung', 'vorstand', 'praeses', 'präses']
 
 const props = defineProps<{ groupId: string }>()
 
@@ -71,13 +70,7 @@ const topic = computed(() => {
   return account?.name ?? null
 })
 
-const authorized = computed(() =>
-  auth.roles.some(
-    (r) =>
-      r.group_id === Number(props.groupId) &&
-      SEND_ROLE_KEYWORDS.some((kw) => r.type.toLowerCase().includes(kw)),
-  ),
-)
+const authorized = computed(() => canSendInGroup(auth.roles, Number(props.groupId)))
 
 const form = ref({ title: '', message: '', priority: 3 as 1 | 2 | 3 | 4 | 5 })
 const sending = ref(false)

@@ -46,9 +46,8 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { canSendInGroup } from '../composables/useCanSend'
 import type { Group } from '../types/hitobito'
-
-const SEND_ROLE_KEYWORDS = ['leitung', 'vorstand', 'praeses', 'präses']
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -63,11 +62,7 @@ function ntfyTopic(group: Group): string | null {
 }
 
 function canSend(groupId: number): boolean {
-  return auth.roles.some(
-    (r) =>
-      r.group_id === groupId &&
-      SEND_ROLE_KEYWORDS.some((kw) => r.type.toLowerCase().includes(kw)),
-  )
+  return canSendInGroup(auth.roles, groupId)
 }
 
 function logout() {

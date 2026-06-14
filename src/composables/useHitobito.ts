@@ -92,6 +92,7 @@ export function useHitobito() {
       type: (r['role_class_name'] ?? r['type'] ?? '') as string,
       group_id: r['group_id'] as number,
       label: (r['label'] ?? r['role_name']) as string | undefined,
+      permissions: (r['permissions'] as string[] | undefined) ?? [],
     }))
 
     return { person, roles }
