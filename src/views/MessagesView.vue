@@ -68,7 +68,8 @@ import { useAuthStore } from '../stores/auth'
 import type { Group } from '../types/hitobito'
 import { fetchMessages, loadCachedMessages, NTFY_BASE, type NtfyMessage } from '../composables/useNtfyMessages'
 import { canSendInGroup } from '../composables/useCanSend'
-import { deriveKey, decryptText, unwrapMessage, isJublaMessage } from '../composables/useEncryption'
+import { verifyAndDecrypt, unwrapMessage, isJublaMessage } from '../composables/useEncryption'
+import { extractTopic, parseJublaEntry } from '../composables/useGroupSetup'
 
 const props = defineProps<{ groupId: string }>()
 const auth = useAuthStore()
@@ -86,9 +87,14 @@ const oldestMessage = computed(() =>
   messages.value.length > 0 ? messages.value[messages.value.length - 1] : null,
 )
 
+const jublaEntry = computed(() => {
+  const account = group.value?.social_accounts?.find((a) => a.label.toLowerCase() === 'ntfy')
+  return account ? parseJublaEntry(account.name) : null
+})
+
 const topic = computed(() => {
   const account = group.value?.social_accounts?.find((a) => a.label.toLowerCase() === 'ntfy')
-  return account?.name?.trim() ?? null
+  return account ? extractTopic(account.name.trim()) : null
 })
 
 const canSend = computed(() => canSendInGroup(auth.roles, Number(props.groupId)))
@@ -100,17 +106,18 @@ function formatTime(unix: number): string {
   })
 }
 
-async function decryptAll(msgs: NtfyMessage[], t: string) {
-  let key: CryptoKey
-  try { key = await deriveKey(t) } catch { return }
+async function decryptAll(msgs: NtfyMessage[]) {
+  const keys = jublaEntry.value
+  if (!keys) return
   const map = new Map(decryptedBodies.value)
-  for (const msg of msgs) {
-    if (map.has(msg.id) || !isJublaMessage(msg.message)) continue
+  for (const m of msgs) {
+    if (map.has(m.id) || !isJublaMessage(m.message)) continue
     try {
-      const wrapped = await unwrapMessage(msg.message)
-      map.set(msg.id, wrapped ? await decryptText(wrapped.payload, key) : '🔒 [Prüfsumme ungültig]')
-    } catch {
-      map.set(msg.id, '🔒 [Entschlüsselung fehlgeschlagen]')
+      const wrapped = await unwrapMessage(m.message)
+      if (!wrapped) { map.set(m.id, '🔒 [Prüfsumme ungültig]'); continue }
+      map.set(m.id, await verifyAndDecrypt(wrapped.payload, keys.secretKey, keys.encKey))
+    } catch (e) {
+      map.set(m.id, `🔒 [${e instanceof Error ? e.message : 'Fehler'}]`)
     }
   }
   decryptedBodies.value = map
@@ -122,7 +129,7 @@ async function loadMessages() {
     const msgs = await fetchMessages(topic.value)
     messages.value = msgs
     error.value = null
-    await decryptAll(msgs, topic.value)
+    await decryptAll(msgs)
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Fehler beim Laden'
   }

@@ -1,4 +1,4 @@
-import { deriveKey, encryptText, wrapMessage } from './useEncryption'
+import { encryptAndSign, wrapMessage } from './useEncryption'
 
 const NTFY_BASE = (import.meta.env.VITE_NTFY_BASE_URL as string | undefined) ?? 'https://ntfy.sh'
 
@@ -10,11 +10,15 @@ export interface NtfyMessage {
 }
 
 export function useNtfy() {
-  async function sendNotification(topic: string, groupId: number, msg: NtfyMessage): Promise<void> {
-    const key = await deriveKey(topic)
-    const b64 = await encryptText(msg.message, key)
+  async function sendNotification(
+    topic: string,
+    groupId: number,
+    secretKey: Uint8Array,
+    encKey: Uint8Array,
+    msg: NtfyMessage,
+  ): Promise<void> {
+    const b64 = await encryptAndSign(msg.message, secretKey, encKey)
     const body = await wrapMessage(groupId, b64)
-
     const response = await fetch(`${NTFY_BASE}/${topic}`, {
       method: 'POST',
       body,
@@ -24,10 +28,7 @@ export function useNtfy() {
         Tags: (msg.tags ?? ['jubla']).join(','),
       },
     })
-    if (!response.ok) {
-      const err = await response.text()
-      throw new Error(`ntfy Fehler: ${err}`)
-    }
+    if (!response.ok) throw new Error(`ntfy Fehler: ${await response.text()}`)
   }
 
   function subscribeUrl(topic: string): string {

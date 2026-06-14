@@ -58,7 +58,7 @@
 
         <template v-if="generatedTopic">
           <p class="modal-note topic-hint">
-            Trage dieses Thema in hitobito ein:<br />
+            Trage diesen Wert in hitobito ein:<br />
             Gruppe → Info → Soziale Medien → Bezeichnung <code>ntfy</code>, Wert:
           </p>
           <div class="topic-box">
@@ -82,7 +82,7 @@ import { ref, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { canSendInGroup } from '../composables/useCanSend'
-import { generateTopic } from '../composables/useGroupSetup'
+import { generateJublaEntry, extractTopic } from '../composables/useGroupSetup'
 import type { Group } from '../types/hitobito'
 
 const auth = useAuthStore()
@@ -101,12 +101,12 @@ watch(kennwort, async (val) => {
     generatedTopic.value = null
     return
   }
-  generatedTopic.value = await generateTopic(setupGroup.value.id, val)
+  generatedTopic.value = await generateJublaEntry(setupGroup.value.id, val)
 })
 
 function ntfyTopic(group: Group): string | null {
   const account = group.social_accounts?.find((a) => a.label.toLowerCase() === 'ntfy')
-  return account?.name ?? null
+  return account ? extractTopic(account.name) : null
 }
 
 function canSend(groupId: number): boolean {

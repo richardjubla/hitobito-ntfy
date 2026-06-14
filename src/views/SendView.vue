@@ -53,6 +53,7 @@ import { useAuthStore } from '../stores/auth'
 import { useHitobito } from '../composables/useHitobito'
 import { useNtfy } from '../composables/useNtfy'
 import { canSendInGroup } from '../composables/useCanSend'
+import { parseJublaEntry } from '../composables/useGroupSetup'
 import type { Group } from '../types/hitobito'
 
 const props = defineProps<{ groupId: string }>()
@@ -63,13 +64,12 @@ const { sendNotification } = useNtfy()
 
 const group = ref<Group | null>(null)
 
-const topic = computed(() => {
-  const account = group.value?.social_accounts?.find(
-    (a) => a.label.toLowerCase() === 'ntfy',
-  )
-  return account?.name ?? null
+const jublaEntry = computed(() => {
+  const account = group.value?.social_accounts?.find((a) => a.label.toLowerCase() === 'ntfy')
+  return account ? parseJublaEntry(account.name) : null
 })
 
+const topic = computed(() => jublaEntry.value?.topic ?? null)
 const authorized = computed(() => canSendInGroup(auth.roles, Number(props.groupId)))
 
 const form = ref({ title: '', message: '', priority: 3 as 1 | 2 | 3 | 4 | 5 })
@@ -78,16 +78,18 @@ const success = ref(false)
 const sendError = ref<string | null>(null)
 
 async function send() {
-  if (!topic.value) return
+  if (!jublaEntry.value) return
   sending.value = true
   success.value = false
   sendError.value = null
   try {
-    await sendNotification(topic.value, Number(props.groupId), {
-      title: form.value.title,
-      message: form.value.message,
-      priority: form.value.priority,
-    })
+    await sendNotification(
+      jublaEntry.value.topic,
+      Number(props.groupId),
+      jublaEntry.value.secretKey,
+      jublaEntry.value.encKey,
+      { title: form.value.title, message: form.value.message, priority: form.value.priority },
+    )
     success.value = true
     form.value = { title: '', message: '', priority: 3 }
   } catch (e) {

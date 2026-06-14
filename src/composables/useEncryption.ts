@@ -1,30 +1,53 @@
+import _sodium from 'libsodium-wrappers'
+
 const HEADER = '-----BEGIN JUBLA MESSAGE-----'
 const FOOTER = '-----END JUBLA MESSAGE-----'
 
-export async function deriveKey(topic: string): Promise<CryptoKey> {
-  const raw = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(topic))
-  return crypto.subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt'])
+async function getSodium() {
+  await _sodium.ready
+  return _sodium
 }
 
-export async function encryptText(plaintext: string, key: CryptoKey): Promise<string> {
-  const iv = crypto.getRandomValues(new Uint8Array(12))
-  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(plaintext))
-  const buf = new Uint8Array(12 + ct.byteLength)
-  buf.set(iv)
-  buf.set(new Uint8Array(ct), 12)
-  return btoa(String.fromCharCode(...buf))
-}
-
-export async function decryptText(b64: string, key: CryptoKey): Promise<string> {
-  const buf = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))
-  const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(0, 12) }, key, buf.slice(12))
-  return new TextDecoder().decode(pt)
-}
-
-async function jublaChecksum(b64payload: string): Promise<string> {
-  const raw = Uint8Array.from(atob(b64payload), (c) => c.charCodeAt(0))
-  const hash = new Uint8Array(await crypto.subtle.digest('SHA-256', raw))
+async function jublaChecksum(b64: string): Promise<string> {
+  const hash = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(b64)))
   return btoa(String.fromCharCode(hash[0], hash[1], hash[2]))
+}
+
+export async function encryptAndSign(
+  message: string,
+  secretKey: Uint8Array,
+  encKey: Uint8Array,
+): Promise<string> {
+  const sodium = await getSodium()
+  const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES)
+  const ct = sodium.crypto_secretbox_easy(message, nonce, encKey)
+  const payload = new Uint8Array(nonce.length + ct.length)
+  payload.set(nonce)
+  payload.set(ct, nonce.length)
+  const sig = sodium.crypto_sign_detached(payload, secretKey)
+  const combined = new Uint8Array(payload.length + sig.length)
+  combined.set(payload)
+  combined.set(sig, payload.length)
+  return sodium.to_base64(combined, sodium.base64_variants.URLSAFE_NO_PADDING)
+}
+
+export async function verifyAndDecrypt(
+  b64: string,
+  secretKey: Uint8Array,
+  encKey: Uint8Array,
+): Promise<string> {
+  const sodium = await getSodium()
+  const combined = sodium.from_base64(b64, sodium.base64_variants.URLSAFE_NO_PADDING)
+  const sigLen = sodium.crypto_sign_BYTES
+  const nonceLen = sodium.crypto_secretbox_NONCEBYTES
+  const payload = combined.slice(0, combined.length - sigLen)
+  const sig = combined.slice(combined.length - sigLen)
+  const pubKey = sodium.crypto_sign_ed25519_sk_to_pk(secretKey)
+  if (!sodium.crypto_sign_verify_detached(sig, payload, pubKey)) {
+    throw new Error('Ungültige Signatur')
+  }
+  const pt = sodium.crypto_secretbox_open_easy(payload.slice(nonceLen), payload.slice(0, nonceLen), encKey)
+  return new TextDecoder().decode(pt)
 }
 
 export async function wrapMessage(groupId: number, b64: string): Promise<string> {
@@ -36,13 +59,11 @@ export async function unwrapMessage(body: string): Promise<{ groupId: number; pa
   const s = body.indexOf(HEADER)
   const e = body.indexOf(FOOTER)
   if (s === -1 || e === -1) return null
-
   const lines = body.slice(s + HEADER.length, e).split('\n')
   let groupId: number | null = null
   let afterBlank = false
   const parts: string[] = []
   let storedCrc: string | null = null
-
   for (const line of lines) {
     const t = line.trim()
     if (afterBlank) {
@@ -54,12 +75,9 @@ export async function unwrapMessage(body: string): Promise<{ groupId: number; pa
       afterBlank = true
     }
   }
-
   if (groupId === null || parts.length === 0) return null
   const payload = parts.join('')
-
   if (storedCrc !== null && storedCrc !== (await jublaChecksum(payload))) return null
-
   return { groupId, payload }
 }
 
