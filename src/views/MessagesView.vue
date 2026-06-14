@@ -28,10 +28,10 @@
           <span class="chevron" :class="{ open: infoOpen }">›</span>
         </button>
         <div v-if="infoOpen" class="cache-details">
-          <p>Nachrichten werden <strong>lokal auf diesem Gerät</strong> gespeichert, damit der Verlauf erhalten bleibt.</p>
-          <p>Beim Öffnen der App werden nur die <strong>aktuellen Mitteilungen vom Server</strong> (ntfy.sh Cache) geladen — in der Regel die letzten 12 Stunden.</p>
-          <p v-if="oldestMessage">Älteste gespeicherte Mitteilung: <strong>{{ formatTime(oldestMessage.time) }}</strong></p>
-          <p v-else>Noch keine Mitteilungen im lokalen Speicher.</p>
+          <p>Der Server speichert Mitteilungen nur für <strong>ca. 12 Stunden</strong>. Wer die App länger nicht öffnet, verpasst Mitteilungen aus dieser Zeit unwiderruflich.</p>
+          <p>Einmal geladene Mitteilungen werden <strong>lokal auf diesem Gerät</strong> gespeichert und bleiben erhalten — solange die App regelmässig (mind. alle 12h) geöffnet wird.</p>
+          <p v-if="oldestMessage">Älteste lokal gespeicherte Mitteilung: <strong>{{ formatTime(oldestMessage.time) }}</strong></p>
+          <p v-else class="muted">Noch keine Mitteilungen lokal gespeichert.</p>
         </div>
       </div>
 
@@ -162,6 +162,7 @@ code { background: #f0f0f0; padding: .1em .35em; border-radius: 4px; }
   border-top: 1px solid #dde3f0;
 }
 .cache-details p { margin: 0; }
+.muted { color: #999; }
 .refreshing { font-size: .78rem; color: #888; text-align: right; margin-bottom: .4rem; }
 .messages { display: flex; flex-direction: column; gap: .8rem; }
 .msg-card {
