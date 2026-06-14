@@ -15,16 +15,17 @@ async function jublaChecksum(b64: string): Promise<string> {
 
 export async function encryptAndSign(
   message: string,
-  secretKey: Uint8Array,
+  signingKey: Uint8Array,
   encKey: Uint8Array,
 ): Promise<string> {
   const sodium = await getSodium()
+  const { privateKey } = sodium.crypto_sign_seed_keypair(signingKey)
   const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES)
   const ct = sodium.crypto_secretbox_easy(message, nonce, encKey)
   const payload = new Uint8Array(nonce.length + ct.length)
   payload.set(nonce)
   payload.set(ct, nonce.length)
-  const sig = sodium.crypto_sign_detached(payload, secretKey)
+  const sig = sodium.crypto_sign_detached(payload, privateKey)
   const combined = new Uint8Array(payload.length + sig.length)
   combined.set(payload)
   combined.set(sig, payload.length)
@@ -33,17 +34,17 @@ export async function encryptAndSign(
 
 export async function verifyAndDecrypt(
   b64: string,
-  secretKey: Uint8Array,
+  signingKey: Uint8Array,
   encKey: Uint8Array,
 ): Promise<string> {
   const sodium = await getSodium()
+  const { publicKey } = sodium.crypto_sign_seed_keypair(signingKey)
   const combined = sodium.from_base64(b64, sodium.base64_variants.URLSAFE_NO_PADDING)
   const sigLen = sodium.crypto_sign_BYTES
   const nonceLen = sodium.crypto_secretbox_NONCEBYTES
   const payload = combined.slice(0, combined.length - sigLen)
   const sig = combined.slice(combined.length - sigLen)
-  const pubKey = sodium.crypto_sign_ed25519_sk_to_pk(secretKey)
-  if (!sodium.crypto_sign_verify_detached(sig, payload, pubKey)) {
+  if (!sodium.crypto_sign_verify_detached(sig, payload, publicKey)) {
     throw new Error('Ungültige Signatur')
   }
   const pt = sodium.crypto_secretbox_open_easy(payload.slice(nonceLen), payload.slice(0, nonceLen), encKey)

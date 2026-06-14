@@ -18,15 +18,15 @@ function fromBase64Url(b64: string): Uint8Array {
 
 export function parseJublaEntry(
   stored: string,
-): { topic: string; secretKey: Uint8Array; encKey: Uint8Array } | null {
+): { topic: string; signingKey: Uint8Array; encKey: Uint8Array } | null {
   const parts = stored.split(':')
   if (parts.length !== 3) return null
   try {
-    const secretKey = fromBase64Url(parts[1])
+    const signingKey = fromBase64Url(parts[1])
     const encKey = fromBase64Url(parts[2])
-    if (secretKey.length !== 64) return null  // crypto_sign_SECRETKEYBYTES
-    if (encKey.length !== 32) return null     // crypto_secretbox_KEYBYTES
-    return { topic: parts[0], secretKey, encKey }
+    if (signingKey.length !== 32) return null  // ed25519 seed
+    if (encKey.length !== 32) return null      // crypto_secretbox_KEYBYTES
+    return { topic: parts[0], signingKey, encKey }
   } catch {
     return null
   }
@@ -52,7 +52,7 @@ export async function generateJublaEntry(groupId: number, password: string): Pro
     sodium.crypto_pwhash_ALG_ARGON2ID13,
   )
 
-  const { privateKey } = sodium.crypto_sign_seed_keypair(seed.slice(0, 32))
+  const signingKey = seed.slice(0, 32)
   const encKey = seed.slice(32, 64)
 
   const topicHash = new Uint8Array(
@@ -60,7 +60,7 @@ export async function generateJublaEntry(groupId: number, password: string): Pro
   )
   const topic = 'j' + Array.from(topicHash).map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 32)
 
-  const b64sk = sodium.to_base64(privateKey, sodium.base64_variants.URLSAFE_NO_PADDING)
+  const b64sk = sodium.to_base64(signingKey, sodium.base64_variants.URLSAFE_NO_PADDING)
   const b64ek = sodium.to_base64(encKey, sodium.base64_variants.URLSAFE_NO_PADDING)
 
   return `${topic}:${b64sk}:${b64ek}`

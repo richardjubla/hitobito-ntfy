@@ -117,7 +117,7 @@ async function decryptAll(msgs: NtfyMessage[]) {
     try {
       const wrapped = await unwrapMessage(m.message)
       if (!wrapped) continue
-      map.set(m.id, await verifyAndDecrypt(wrapped.payload, keys.secretKey, keys.encKey))
+      map.set(m.id, await verifyAndDecrypt(wrapped.payload, keys.signingKey, keys.encKey))
     } catch {
       // ungültige Signatur oder Entschlüsselungsfehler → nicht anzeigen
     }

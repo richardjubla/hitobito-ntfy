@@ -86,7 +86,7 @@ async function send() {
     await sendNotification(
       jublaEntry.value.topic,
       Number(props.groupId),
-      jublaEntry.value.secretKey,
+      jublaEntry.value.signingKey,
       jublaEntry.value.encKey,
       { title: form.value.title, message: form.value.message, priority: form.value.priority },
     )
