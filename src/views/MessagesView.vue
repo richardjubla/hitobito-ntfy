@@ -13,9 +13,6 @@
           <p class="topic-label">Thema: <code>{{ topic }}</code></p>
         </div>
         <div class="header-actions">
-          <button @click="openInNtfy" class="btn btn-subscribe">
-            In ntfy abonnieren
-          </button>
           <RouterLink v-if="canSend" :to="`/send/${group.id}`" class="btn btn-send">
             Senden
           </RouterLink>
@@ -29,9 +26,14 @@
           <span class="chevron" :class="{ open: infoOpen }">›</span>
         </button>
         <div v-if="infoOpen" class="cache-details">
-          <p>Der Server speichert Mitteilungen nur für <strong>ca. 12 Stunden</strong>. Wer die App länger nicht öffnet, verpasst Mitteilungen aus dieser Zeit unwiderruflich.</p>
-          <p>Einmal geladene Mitteilungen werden <strong>lokal auf diesem Gerät</strong> gespeichert und bleiben erhalten — solange die App regelmässig (mind. alle 12h) geöffnet wird.</p>
-          <p v-if="oldestMessage">Älteste lokal gespeicherte Mitteilung: <strong>{{ formatTime(oldestMessage.time) }}</strong></p>
+          <p>Neue Mitteilungen werden als <strong>Push-Benachrichtigung</strong> über die <strong>ntfy-App</strong> zugestellt. Beim Tippen auf die Benachrichtigung öffnet sich diese App mit der entschlüsselten Mitteilung.</p>
+          <p>Damit das funktioniert, muss der Kanal dieser Gruppe in der ntfy-App abonniert sein:</p>
+          <div class="subscribe-row">
+            <button class="btn-sub btn-sub-app" @click="openInNtfyApp">In ntfy-App öffnen</button>
+            <a class="btn-sub btn-sub-web" :href="safeSubscribeUrl" target="_blank" rel="noopener">Im Browser öffnen</a>
+          </div>
+          <p class="muted-small">Der Server speichert Mitteilungen nur <strong>ca. 12 Stunden</strong>. Einmal geladene Mitteilungen bleiben <strong>lokal auf diesem Gerät</strong> erhalten — solange die App regelmässig geöffnet wird.</p>
+          <p v-if="oldestMessage">Älteste gespeicherte Mitteilung: <strong>{{ formatTime(oldestMessage.time) }}</strong></p>
           <p v-else class="muted">Noch keine Mitteilungen lokal gespeichert.</p>
         </div>
       </div>
@@ -103,14 +105,10 @@ const safeSubscribeUrl = computed(() => {
   return new URL(`/${topic.value}`, NTFY_BASE).href
 })
 
-function openInNtfy() {
-  const webUrl = safeSubscribeUrl.value
-  if (!webUrl) return
+function openInNtfyApp() {
   const ntfyBase = new URL(NTFY_BASE).host
-  // Try the ntfy custom URL scheme first (opens the app if installed)
   window.location.href = `ntfy://${ntfyBase}/${topic.value}`
-  // Fall back to browser after 600ms if the app didn't open
-  setTimeout(() => window.open(webUrl, '_blank', 'noopener,noreferrer'), 600)
+  setTimeout(() => window.open(safeSubscribeUrl.value, '_blank', 'noopener,noreferrer'), 600)
 }
 
 function formatTime(unix: number): string {
@@ -175,8 +173,6 @@ h1 { font-size: 1.3rem; }
 code { background: #f0f0f0; padding: .1em .35em; border-radius: 4px; }
 .header-actions { display: flex; gap: .5rem; flex-shrink: 0; }
 .btn { padding: .45rem .9rem; border-radius: 6px; font-size: .85rem; text-decoration: none; border: none; cursor: pointer; }
-.btn-subscribe { background: #eee; color: #333; }
-.btn-subscribe:hover { background: #ddd; }
 .btn-send { background: #a1090f; color: white; }
 .btn-send:hover { background: #7d070b; }
 .cache-info { margin-bottom: 1rem; border: 1px solid #dde3f0; border-radius: 8px; overflow: hidden; }
@@ -208,7 +204,22 @@ code { background: #f0f0f0; padding: .1em .35em; border-radius: 4px; }
   border-top: 1px solid #dde3f0;
 }
 .cache-details p { margin: 0; }
+.subscribe-row { display: flex; gap: .5rem; flex-wrap: wrap; margin: .2rem 0; }
+.btn-sub {
+  padding: .35rem .8rem;
+  border-radius: 6px;
+  font-size: .8rem;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  display: inline-block;
+}
+.btn-sub-app { background: #014cbc; color: white; }
+.btn-sub-app:hover { background: #013888; }
+.btn-sub-web { background: #eee; color: #333; }
+.btn-sub-web:hover { background: #ddd; }
 .muted { color: #999; }
+.muted-small { color: #888; font-size: .79rem; }
 .refreshing { font-size: .78rem; color: #888; text-align: right; margin-bottom: .4rem; }
 .messages { display: flex; flex-direction: column; gap: .8rem; }
 .msg-card {
