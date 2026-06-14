@@ -42,16 +42,7 @@
             {{ charsLeft }} Zeichen übrig
           </span>
         </label>
-        <label>
-          Priorität
-          <select v-model="form.priority">
-            <option :value="1">1 – Min</option>
-            <option :value="2">2 – Tief</option>
-            <option :value="3">3 – Normal</option>
-            <option :value="4">4 – Hoch</option>
-            <option :value="5">5 – Max</option>
-          </select>
-        </label>
+
 
         <p v-if="success" class="success">Nachricht erfolgreich gesendet!</p>
         <p v-if="sendError" class="error">{{ sendError }}</p>
@@ -95,7 +86,7 @@ const hasNtfyAccount = computed(() =>
 const topic = computed(() => jublaEntry.value?.topic ?? null)
 const authorized = computed(() => canSendInGroup(auth.roles, Number(props.groupId)))
 
-const form = ref({ title: '', message: '', priority: 3 as 1 | 2 | 3 | 4 | 5 })
+const form = ref({ title: '', message: '' })
 const charsLeft = computed(() => MAX_MESSAGE - form.value.message.length)
 const sending = ref(false)
 const success = ref(false)
@@ -112,10 +103,10 @@ async function send() {
       Number(props.groupId),
       jublaEntry.value.signingKey,
       jublaEntry.value.encKey,
-      { title: form.value.title, message: form.value.message, priority: form.value.priority },
+      { title: form.value.title, message: form.value.message },
     )
     success.value = true
-    form.value = { title: '', message: '', priority: 3 }
+    form.value = { title: '', message: '' }
   } catch (e) {
     sendError.value = e instanceof Error ? e.message : 'Senden fehlgeschlagen'
   } finally {
