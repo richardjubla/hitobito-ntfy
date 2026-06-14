@@ -22,7 +22,7 @@ export function useNtfy() {
     const body = `Diese Mitteilung in der Jubla Mitteilungen App abrufen.\n${wrapper}`
     // Receipt topic: main topic + 'r' suffix — only visible in ntfy, filtered by app
     const ackTopic = `${topic}r`
-    const actions = `http, Gelesen ✓, ${NTFY_BASE}/${ackTopic}, method=POST, body=gelesen, clear=true`
+    const actions = `http, Gelesen, ${NTFY_BASE}/${ackTopic}, method=POST, body=gelesen, clear=true`
     const response = await fetch(`${NTFY_BASE}/${topic}`, {
       method: 'POST',
       body,
