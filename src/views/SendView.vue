@@ -3,9 +3,11 @@
     <RouterLink to="/dashboard" class="back">← Zurück</RouterLink>
 
     <div v-if="!group" class="status">Lade Gruppe…</div>
-    <div v-else-if="!topic" class="error">
-      Diese Gruppe hat kein ntfy-Thema gesetzt.<br />
-      Trage es in hitobito ein: Gruppe → Soziale Medien → Label <code>ntfy</code>
+    <div v-else-if="!topic" class="empty-card">
+      <div class="empty-icon">📭</div>
+      <h2>Kein Kanal eingerichtet</h2>
+      <p>Für <strong>{{ group.name }}</strong> wurde noch kein ntfy-Kanal konfiguriert.</p>
+      <RouterLink to="/dashboard" class="btn btn-setup">Kanal einrichten</RouterLink>
     </div>
     <div v-else-if="!authorized" class="error">
       Keine Berechtigung zum Senden für diese Gruppe.
@@ -147,4 +149,17 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: #014cbc
 .success { color: #2a7d2a; font-size: .9rem; }
 .error { color: #c00; font-size: .9rem; }
 .status { text-align: center; padding: 3rem; color: #666; }
+.empty-card {
+  background: white;
+  border-radius: 10px;
+  padding: 2.5rem 1.5rem;
+  box-shadow: 0 1px 6px rgba(0,0,0,.08);
+  text-align: center;
+}
+.empty-icon { font-size: 2.5rem; margin-bottom: .8rem; }
+.empty-card h2 { font-size: 1.2rem; margin-bottom: .5rem; color: #34363c; }
+.empty-card p { font-size: .95rem; color: #666; margin-bottom: 1.4rem; }
+.btn { display: inline-block; text-decoration: none; border-radius: 8px; padding: .65rem 1.3rem; font-size: .95rem; }
+.btn-setup { background: #014cbc; color: white; }
+.btn-setup:hover { background: #013888; }
 </style>
