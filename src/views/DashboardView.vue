@@ -37,6 +37,10 @@
             </RouterLink>
           </div>
         </div>
+        <div v-else-if="hasNtfyAccount(group)" class="no-topic no-topic-warn">
+          <span>Ungültiger Kanal-Eintrag.</span>
+          <button v-if="canSend(group.id)" class="btn-setup" @click="openSetup(group)">Neu generieren</button>
+        </div>
         <div v-else class="no-topic">
           <span v-if="canSend(group.id)">
             Kein ntfy-Kanal eingerichtet.
@@ -115,7 +119,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useHitobito } from '../composables/useHitobito'
 import { canSendInGroup } from '../composables/useCanSend'
-import { generateJublaEntry, extractTopic } from '../composables/useGroupSetup'
+import { generateJublaEntry, parseJublaEntry } from '../composables/useGroupSetup'
 import type { Group } from '../types/hitobito'
 
 const auth = useAuthStore()
@@ -132,9 +136,14 @@ const kennwort = ref('')
 const generating = ref(false)
 const copied = ref(false)
 
+function hasNtfyAccount(group: Group): boolean {
+  return !!group.social_accounts?.find((a) => a.label.toLowerCase() === 'ntfy')
+}
+
 function ntfyTopic(group: Group): string | null {
   const account = group.social_accounts?.find((a) => a.label.toLowerCase() === 'ntfy')
-  return account ? extractTopic(account.name) : null
+  if (!account) return null
+  return parseJublaEntry(account.name)?.topic ?? null
 }
 
 function canSend(groupId: number): boolean {
@@ -293,6 +302,7 @@ code { background: #f0f0f0; padding: .1em .4em; border-radius: 4px; font-size: .
 .btn-send { background: #a1090f; color: white; }
 .btn-send:hover { background: #7d070b; }
 .no-topic { margin-top: .8rem; font-size: .9rem; color: #888; display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+.no-topic-warn { color: #b85c00; }
 .btn-setup {
   padding: .35rem .8rem;
   background: #014cbc;

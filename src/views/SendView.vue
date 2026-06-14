@@ -3,6 +3,12 @@
     <RouterLink to="/dashboard" class="back">← Zurück</RouterLink>
 
     <div v-if="!group" class="status">Lade Gruppe…</div>
+    <div v-else-if="!topic && hasNtfyAccount" class="empty-card">
+      <div class="empty-icon">⚠️</div>
+      <h2>Ungültiger Kanal-Eintrag</h2>
+      <p>Der Eintrag für <strong>{{ group.name }}</strong> ist nicht gültig. Bitte neu generieren.</p>
+      <RouterLink to="/dashboard" class="btn btn-setup">Neu generieren</RouterLink>
+    </div>
     <div v-else-if="!topic" class="empty-card">
       <div class="empty-icon">📭</div>
       <h2>Kein Kanal eingerichtet</h2>
@@ -70,6 +76,10 @@ const jublaEntry = computed(() => {
   const account = group.value?.social_accounts?.find((a) => a.label.toLowerCase() === 'ntfy')
   return account ? parseJublaEntry(account.name) : null
 })
+
+const hasNtfyAccount = computed(() =>
+  !!group.value?.social_accounts?.find((a) => a.label.toLowerCase() === 'ntfy'),
+)
 
 const topic = computed(() => jublaEntry.value?.topic ?? null)
 const authorized = computed(() => canSendInGroup(auth.roles, Number(props.groupId)))

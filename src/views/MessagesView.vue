@@ -3,6 +3,7 @@
     <RouterLink to="/dashboard" class="back">← Zurück</RouterLink>
 
     <div v-if="!group" class="status">Lade…</div>
+    <div v-else-if="!topic && hasNtfyAccount" class="error">Ungültiger Kanal-Eintrag — bitte im Dashboard neu generieren.</div>
     <div v-else-if="!topic" class="error">Kein ntfy-Thema für diese Gruppe gesetzt.</div>
 
     <template v-else>
@@ -64,7 +65,7 @@ import type { Group } from '../types/hitobito'
 import { fetchMessages, loadCachedMessages, NTFY_BASE, type NtfyMessage } from '../composables/useNtfyMessages'
 import { canSendInGroup } from '../composables/useCanSend'
 import { verifyAndDecrypt, unwrapMessage, isJublaMessage } from '../composables/useEncryption'
-import { extractTopic, parseJublaEntry } from '../composables/useGroupSetup'
+import { parseJublaEntry } from '../composables/useGroupSetup'
 
 const props = defineProps<{ groupId: string }>()
 const auth = useAuthStore()
@@ -89,10 +90,11 @@ const jublaEntry = computed(() => {
   return account ? parseJublaEntry(account.name) : null
 })
 
-const topic = computed(() => {
-  const account = group.value?.social_accounts?.find((a) => a.label.toLowerCase() === 'ntfy')
-  return account ? extractTopic(account.name.trim()) : null
-})
+const hasNtfyAccount = computed(() =>
+  !!group.value?.social_accounts?.find((a) => a.label.toLowerCase() === 'ntfy'),
+)
+
+const topic = computed(() => jublaEntry.value?.topic ?? null)
 
 const canSend = computed(() => canSendInGroup(auth.roles, Number(props.groupId)))
 
