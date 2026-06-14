@@ -36,6 +36,14 @@ onMounted(async () => {
     const groups = await hitobito.fetchGroupsWithToken(accessToken, person.id, groupIds)
     auth.setAuth(accessToken, person, roles)
     auth.setGroups(groups)
+    // Cache groups immediately so DashboardView skips the background refresh
+    // (the refresh fallback fetches without ?include=social_accounts, losing ntfy entries)
+    try {
+      localStorage.setItem(
+        `jubla_groups_${person.id}`,
+        JSON.stringify({ groups, refreshedAt: Date.now() }),
+      )
+    } catch {}
     router.push('/dashboard')
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Unbekannter Fehler beim Login'

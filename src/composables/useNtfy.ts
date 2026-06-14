@@ -20,9 +20,6 @@ export function useNtfy() {
     const wrapper = await wrapMessage(b64)
     const appUrl = `${window.location.origin}${window.location.pathname}#/messages/${groupId}`
     const body = `Diese Mitteilung in der Jubla Mitteilungen App abrufen.\n${wrapper}`
-    // Receipt topic: main topic + 'r' suffix — only visible in ntfy, filtered by app
-    const ackTopic = `${topic}r`
-    const actions = `http, Gelesen, ${NTFY_BASE}/${ackTopic}, method=POST, body=gelesen, clear=true`
     const response = await fetch(`${NTFY_BASE}/${topic}`, {
       method: 'POST',
       body,
@@ -31,7 +28,6 @@ export function useNtfy() {
         Priority: '3',
         Tags: (msg.tags ?? ['jubla']).join(','),
         Click: appUrl,
-        Actions: actions,
       },
     })
     if (!response.ok) throw new Error(`ntfy Fehler: ${await response.text()}`)
