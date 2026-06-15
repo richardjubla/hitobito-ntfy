@@ -10,7 +10,6 @@
       <header>
         <div>
           <h1>{{ group.name }}</h1>
-          <p class="topic-label">Thema: <code>{{ topic }}</code></p>
         </div>
         <div class="header-actions">
           <RouterLink v-if="canSend" :to="`/send/${group.id}`" class="btn btn-send">

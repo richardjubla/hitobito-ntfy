@@ -1,6 +1,6 @@
 <template>
   <div class="page">
-    <RouterLink to="/dashboard" class="back">← Zurück</RouterLink>
+    <RouterLink :to="`/messages/${props.groupId}`" class="back">← Zurück</RouterLink>
 
     <div v-if="!group" class="status">Lade Gruppe…</div>
     <div v-else-if="!topic && hasNtfyAccount" class="empty-card">
@@ -22,7 +22,6 @@
     <div v-else class="send-card">
       <h1>Nachricht senden</h1>
       <p class="group-name">{{ group.name }}</p>
-      <p class="topic-info">Thema: <code>{{ topic }}</code></p>
 
       <form @submit.prevent="send">
         <label>
@@ -60,6 +59,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 
 const MAX_TITLE = 64
 const MAX_MESSAGE = 512
@@ -73,6 +73,7 @@ import type { Group } from '../types/hitobito'
 const props = defineProps<{ groupId: string }>()
 
 const auth = useAuthStore()
+const router = useRouter()
 const { fetchGroupDetails } = useHitobito()
 const { sendNotification } = useNtfy()
 
@@ -113,6 +114,7 @@ async function send() {
     )
     success.value = true
     form.value = { title: '', message: '' }
+    setTimeout(() => router.push(`/messages/${props.groupId}`), 1500)
   } catch (e) {
     sendError.value = e instanceof Error ? e.message : 'Senden fehlgeschlagen'
   } finally {
