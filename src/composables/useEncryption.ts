@@ -1,4 +1,5 @@
 import _sodium from 'libsodium-wrappers-sumo'
+import { deflateSync, inflateSync } from 'fflate'
 
 const HEADER = '-----BEGIN JUBLA MESSAGE-----'
 const FOOTER = '-----END JUBLA MESSAGE-----'
@@ -51,14 +52,12 @@ export async function verifyAndDecrypt(
   return new TextDecoder().decode(pt).replace(/\r\n/g, '\n').replace(/\r/g, '\n')
 }
 
-async function compress(data: Uint8Array): Promise<Uint8Array> {
-  const stream = new Blob([data.buffer as ArrayBuffer]).stream().pipeThrough(new CompressionStream('deflate-raw'))
-  return new Uint8Array(await new Response(stream).arrayBuffer())
+function compress(data: Uint8Array): Uint8Array {
+  return deflateSync(data)
 }
 
-async function decompress(data: Uint8Array): Promise<Uint8Array> {
-  const stream = new Blob([data.buffer as ArrayBuffer]).stream().pipeThrough(new DecompressionStream('deflate-raw'))
-  return new Uint8Array(await new Response(stream).arrayBuffer())
+function decompress(data: Uint8Array): Uint8Array {
+  return inflateSync(data)
 }
 
 export async function encryptForUrl(
@@ -69,7 +68,7 @@ export async function encryptForUrl(
   const sodium = await getSodium()
   const { privateKey } = sodium.crypto_sign_seed_keypair(signingKey)
   const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES)
-  const compressed = await compress(new TextEncoder().encode(message))
+  const compressed = compress(new TextEncoder().encode(message))
   const ct = sodium.crypto_secretbox_easy(compressed, nonce, encKey)
   const payload = new Uint8Array(nonce.length + ct.length)
   payload.set(nonce)
@@ -95,7 +94,7 @@ export async function decryptFromUrl(
   const sig = combined.slice(combined.length - sigLen)
   if (!sodium.crypto_sign_verify_detached(sig, payload, publicKey)) throw new Error('Ungültige Signatur')
   const compressed = sodium.crypto_secretbox_open_easy(payload.slice(nonceLen), payload.slice(0, nonceLen), encKey)
-  const decompressed = await decompress(compressed)
+  const decompressed = decompress(compressed)
   return new TextDecoder().decode(decompressed).replace(/\r\n/g, '\n').replace(/\r/g, '\n')
 }
 
