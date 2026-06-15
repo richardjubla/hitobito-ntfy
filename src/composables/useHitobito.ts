@@ -129,10 +129,12 @@ export function useHitobito() {
             )
           } catch (e) {
             if (e instanceof DOMException && e.name === 'AbortError') throw e
+            if (e instanceof TokenExpiredError) throw e
             return parseGroup(await apiFetch<JsonApiResponse>(`/api/groups/${id}`, t, signal))
           }
         } catch (e) {
           if (e instanceof DOMException && e.name === 'AbortError') throw e
+          if (e instanceof TokenExpiredError) throw e
           return null
         }
       }),
