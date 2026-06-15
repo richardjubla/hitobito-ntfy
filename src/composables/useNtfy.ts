@@ -1,4 +1,4 @@
-import { encryptAndSign, wrapMessage, computeMessageTag } from './useEncryption'
+import { encryptAndSign, wrapMessage, computeMessageTag, encryptForUrl } from './useEncryption'
 
 const NTFY_BASE = (import.meta.env.VITE_NTFY_BASE_URL as string | undefined) ?? 'https://ntfy.sh'
 
@@ -16,9 +16,12 @@ export function useNtfy() {
     encKey: Uint8Array,
     msg: NtfyMessage,
   ): Promise<void> {
-    const b64 = await encryptAndSign(msg.message.replace(/\r\n/g, '\n').replace(/\r/g, '\n'), secretKey, encKey)
+    const normalized = msg.message.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+    const b64 = await encryptAndSign(normalized, secretKey, encKey)
     const wrapper = await wrapMessage(b64)
-    const appUrl = `${window.location.origin}${window.location.pathname}#/messages/${groupId}`
+    // Click URL carries the compressed+encrypted message so it stays readable after ntfy TTL
+    const urlPayload = await encryptForUrl(normalized, secretKey, encKey)
+    const appUrl = `${window.location.origin}${window.location.pathname}#/messages/${groupId}?m=${urlPayload}&t=${encodeURIComponent(msg.title)}`
     const body = `Diese Mitteilung in der Jubla Mitteilungen App abrufen.\n${wrapper}`
     const windowTs = Math.floor(Date.now() / 1000 / 300)
     const authTag = await computeMessageTag(encKey, windowTs)

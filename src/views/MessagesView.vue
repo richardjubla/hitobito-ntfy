@@ -39,6 +39,13 @@
       </div>
 
       <div class="messages">
+        <article v-if="urlMessage" class="msg-card msg-card-url">
+          <div class="msg-header">
+            <span class="msg-title">{{ urlMessage.title }}</span>
+          </div>
+          <p class="msg-body">{{ urlMessage.text }}</p>
+        </article>
+
         <div v-if="loading && messages.length === 0" class="status">Lade Nachrichten…</div>
         <div v-else-if="error && messages.length === 0" class="error">{{ error }}</div>
         <div v-else-if="visibleMessages.length === 0" class="empty">Noch keine Mitteilungen.</div>
@@ -62,19 +69,22 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useHitobito } from '../composables/useHitobito'
 import type { Group } from '../types/hitobito'
 import { fetchMessages, loadCachedMessages, NTFY_BASE, type NtfyMessage } from '../composables/useNtfyMessages'
 import { canSendInGroup } from '../composables/useCanSend'
-import { verifyAndDecrypt, unwrapMessage, isJublaMessage, computeMessageTag } from '../composables/useEncryption'
+import { verifyAndDecrypt, unwrapMessage, isJublaMessage, computeMessageTag, decryptFromUrl } from '../composables/useEncryption'
 import { parseJublaEntry } from '../composables/useGroupSetup'
 
 const props = defineProps<{ groupId: string }>()
+const route = useRoute()
 const auth = useAuthStore()
 const { fetchGroupDetails } = useHitobito()
 
 const group = ref<Group | null>(null)
+const urlMessage = ref<{ title: string; text: string } | null>(null)
 const messages = ref<NtfyMessage[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
@@ -171,12 +181,32 @@ onMounted(async () => {
       // Gruppe konnte nicht geladen werden
     }
   }
+
+  // Mitteilung aus Click-URL entschlüsseln (lesbar auch nach ntfy-TTL)
+  const urlPayload = route.query.m as string | undefined
+  if (urlPayload && jublaEntry.value) {
+    try {
+      const text = await decryptFromUrl(urlPayload, jublaEntry.value.signingKey, jublaEntry.value.encKey)
+      const title = decodeURIComponent((route.query.t as string | undefined) ?? '')
+      urlMessage.value = { title: title || 'Mitteilung', text }
+    } catch {
+      // Ungültiger oder manipulierter URL-Payload → ignorieren
+    }
+  }
+
   if (topic.value) {
     messages.value = loadCachedMessages(topic.value)
   }
   loading.value = true
   await loadMessages()
   loading.value = false
+
+  // Duplikat ausblenden falls die Mitteilung noch bei ntfy verfügbar ist
+  if (urlMessage.value) {
+    const txt = urlMessage.value.text
+    if ([...decryptedBodies.value.values()].some((v) => v === txt)) urlMessage.value = null
+  }
+
   refreshTimer = setInterval(loadMessages, 30_000)
 })
 
@@ -260,6 +290,7 @@ code { background: #f0f0f0; padding: .1em .35em; border-radius: 4px; }
 .msg-body { font-size: .9rem; color: #444; white-space: pre-wrap; }
 .msg-tags { display: flex; gap: .3rem; margin-top: .4rem; flex-wrap: wrap; }
 .tag { background: #f0f0f0; border-radius: 4px; padding: .1em .5em; font-size: .75rem; color: #666; }
+.msg-card-url { border-left-color: #014cbc; }
 .status, .empty { text-align: center; padding: 2rem; color: #888; }
 .error { color: #c00; }
 .error.small { font-size: .85rem; margin-bottom: .5rem; }

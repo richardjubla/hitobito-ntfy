@@ -51,6 +51,80 @@ export async function verifyAndDecrypt(
   return new TextDecoder().decode(pt).replace(/\r\n/g, '\n').replace(/\r/g, '\n')
 }
 
+async function compress(data: Uint8Array): Promise<Uint8Array> {
+  const cs = new CompressionStream('deflate-raw')
+  const writer = cs.writable.getWriter()
+  await writer.write(new Uint8Array(data))
+  await writer.close()
+  const chunks: Uint8Array[] = []
+  const reader = cs.readable.getReader()
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    chunks.push(value)
+  }
+  const out = new Uint8Array(chunks.reduce((n, c) => n + c.length, 0))
+  let off = 0
+  for (const c of chunks) { out.set(c, off); off += c.length }
+  return out
+}
+
+async function decompress(data: Uint8Array): Promise<Uint8Array> {
+  const ds = new DecompressionStream('deflate-raw')
+  const writer = ds.writable.getWriter()
+  await writer.write(new Uint8Array(data))
+  await writer.close()
+  const chunks: Uint8Array[] = []
+  const reader = ds.readable.getReader()
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    chunks.push(value)
+  }
+  const out = new Uint8Array(chunks.reduce((n, c) => n + c.length, 0))
+  let off = 0
+  for (const c of chunks) { out.set(c, off); off += c.length }
+  return out
+}
+
+export async function encryptForUrl(
+  message: string,
+  signingKey: Uint8Array,
+  encKey: Uint8Array,
+): Promise<string> {
+  const sodium = await getSodium()
+  const { privateKey } = sodium.crypto_sign_seed_keypair(signingKey)
+  const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES)
+  const compressed = await compress(new TextEncoder().encode(message))
+  const ct = sodium.crypto_secretbox_easy(compressed, nonce, encKey)
+  const payload = new Uint8Array(nonce.length + ct.length)
+  payload.set(nonce)
+  payload.set(ct, nonce.length)
+  const sig = sodium.crypto_sign_detached(payload, privateKey)
+  const combined = new Uint8Array(payload.length + sig.length)
+  combined.set(payload)
+  combined.set(sig, payload.length)
+  return sodium.to_base64(combined, sodium.base64_variants.URLSAFE_NO_PADDING)
+}
+
+export async function decryptFromUrl(
+  b64: string,
+  signingKey: Uint8Array,
+  encKey: Uint8Array,
+): Promise<string> {
+  const sodium = await getSodium()
+  const { publicKey } = sodium.crypto_sign_seed_keypair(signingKey)
+  const combined = sodium.from_base64(b64, sodium.base64_variants.URLSAFE_NO_PADDING)
+  const sigLen = sodium.crypto_sign_BYTES
+  const nonceLen = sodium.crypto_secretbox_NONCEBYTES
+  const payload = combined.slice(0, combined.length - sigLen)
+  const sig = combined.slice(combined.length - sigLen)
+  if (!sodium.crypto_sign_verify_detached(sig, payload, publicKey)) throw new Error('Ungültige Signatur')
+  const compressed = sodium.crypto_secretbox_open_easy(payload.slice(nonceLen), payload.slice(0, nonceLen), encKey)
+  const decompressed = await decompress(compressed)
+  return new TextDecoder().decode(decompressed).replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+}
+
 // TOTP-style auth tag: HMAC-SHA256(encKey, 5-min-window) → first 8 bytes, base64url
 export async function computeMessageTag(encKey: Uint8Array, windowTs: number): Promise<string> {
   const keyBytes = new Uint8Array(encKey).buffer as ArrayBuffer
