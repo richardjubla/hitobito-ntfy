@@ -52,39 +52,13 @@ export async function verifyAndDecrypt(
 }
 
 async function compress(data: Uint8Array): Promise<Uint8Array> {
-  const cs = new CompressionStream('deflate-raw')
-  const writer = cs.writable.getWriter()
-  await writer.write(new Uint8Array(data))
-  await writer.close()
-  const chunks: Uint8Array[] = []
-  const reader = cs.readable.getReader()
-  for (;;) {
-    const { done, value } = await reader.read()
-    if (done) break
-    chunks.push(value)
-  }
-  const out = new Uint8Array(chunks.reduce((n, c) => n + c.length, 0))
-  let off = 0
-  for (const c of chunks) { out.set(c, off); off += c.length }
-  return out
+  const stream = new Blob([data.buffer as ArrayBuffer]).stream().pipeThrough(new CompressionStream('deflate-raw'))
+  return new Uint8Array(await new Response(stream).arrayBuffer())
 }
 
 async function decompress(data: Uint8Array): Promise<Uint8Array> {
-  const ds = new DecompressionStream('deflate-raw')
-  const writer = ds.writable.getWriter()
-  await writer.write(new Uint8Array(data))
-  await writer.close()
-  const chunks: Uint8Array[] = []
-  const reader = ds.readable.getReader()
-  for (;;) {
-    const { done, value } = await reader.read()
-    if (done) break
-    chunks.push(value)
-  }
-  const out = new Uint8Array(chunks.reduce((n, c) => n + c.length, 0))
-  let off = 0
-  for (const c of chunks) { out.set(c, off); off += c.length }
-  return out
+  const stream = new Blob([data.buffer as ArrayBuffer]).stream().pipeThrough(new DecompressionStream('deflate-raw'))
+  return new Uint8Array(await new Response(stream).arrayBuffer())
 }
 
 export async function encryptForUrl(
