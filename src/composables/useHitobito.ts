@@ -122,7 +122,8 @@ export function useHitobito() {
     const results = await Promise.all(
       ids.map(async (id) => {
         try {
-          // Try with social_accounts; fall back to plain if server errors (hitobito bug)
+          // Try with social_accounts; hitobito intermittently 500s on this endpoint.
+          // Retry once after a short delay before falling back to the plain endpoint.
           try {
             return parseGroup(
               await apiFetch<JsonApiResponse>(`/api/groups/${id}?include=social_accounts`, t, signal),
@@ -130,7 +131,17 @@ export function useHitobito() {
           } catch (e) {
             if (e instanceof DOMException && e.name === 'AbortError') throw e
             if (e instanceof TokenExpiredError) throw e
-            return parseGroup(await apiFetch<JsonApiResponse>(`/api/groups/${id}`, t, signal))
+            await new Promise<void>((resolve) => setTimeout(resolve, 2500))
+            if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+            try {
+              return parseGroup(
+                await apiFetch<JsonApiResponse>(`/api/groups/${id}?include=social_accounts`, t, signal),
+              )
+            } catch (e2) {
+              if (e2 instanceof DOMException && e2.name === 'AbortError') throw e2
+              if (e2 instanceof TokenExpiredError) throw e2
+              return parseGroup(await apiFetch<JsonApiResponse>(`/api/groups/${id}`, t, signal))
+            }
           }
         } catch (e) {
           if (e instanceof DOMException && e.name === 'AbortError') throw e

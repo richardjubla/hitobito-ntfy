@@ -49,11 +49,13 @@ onMounted(async () => {
     } catch {}
     auth.setAuth(accessToken, person, roles)
     auth.setGroups(merged)
-    // Cache groups immediately so DashboardView skips the background refresh
+    // Save groups for instant display, but mark stale (refreshedAt:0) so DashboardView
+    // always does a background refresh — login-time fetches often miss social_accounts due
+    // to intermittent hitobito 500s on ?include=social_accounts.
     try {
       localStorage.setItem(
         `jubla_groups_${person.id}`,
-        JSON.stringify({ groups: merged, refreshedAt: Date.now() }),
+        JSON.stringify({ groups: merged, refreshedAt: 0 }),
       )
     } catch {}
     router.push('/dashboard')

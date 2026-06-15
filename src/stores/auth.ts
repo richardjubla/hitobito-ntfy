@@ -25,8 +25,10 @@ function saveSession(t: string, p: Person, r: Role[]) {
   } catch {}
 }
 
-function clearAll() {
-  try { localStorage.clear() } catch {}
+function clearSession() {
+  // Only remove the session token. The groups cache (jubla_groups_*) is intentionally kept
+  // so the ntfy channel config (SA with encrypted keys) survives re-login and token expiry.
+  try { localStorage.removeItem(SESSION_KEY) } catch {}
   try { sessionStorage.clear() } catch {}
 }
 
@@ -56,7 +58,7 @@ export const useAuthStore = defineStore('auth', () => {
     person.value = null
     roles.value = []
     groups.value = []
-    clearAll()
+    clearSession()
   }
 
   return { token, person, roles, groups, isLoggedIn, setAuth, setGroups, clear }

@@ -27,7 +27,10 @@
       <form @submit.prevent="send">
         <label>
           Titel
-          <input v-model="form.title" type="text" placeholder="Wichtige Information" required />
+          <input v-model="form.title" type="text" :maxlength="MAX_TITLE" placeholder="Wichtige Information" required />
+          <span class="char-count" :class="{ warn: titleCharsLeft <= 10, over: titleCharsLeft < 0 }">
+            {{ titleCharsLeft }} Zeichen übrig
+          </span>
         </label>
         <label>
           Nachricht
@@ -58,6 +61,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 
+const MAX_TITLE = 64
 const MAX_MESSAGE = 512
 import { useAuthStore } from '../stores/auth'
 import { useHitobito } from '../composables/useHitobito'
@@ -87,6 +91,7 @@ const topic = computed(() => jublaEntry.value?.topic ?? null)
 const authorized = computed(() => canSendInGroup(auth.roles, Number(props.groupId)))
 
 const form = ref({ title: '', message: '' })
+const titleCharsLeft = computed(() => MAX_TITLE - form.value.title.length)
 const charsLeft = computed(() => MAX_MESSAGE - form.value.message.length)
 const sending = ref(false)
 const success = ref(false)
@@ -104,6 +109,7 @@ async function send() {
       jublaEntry.value.signingKey,
       jublaEntry.value.encKey,
       { title: form.value.title, message: form.value.message },
+      group.value?.short_name ?? group.value?.name,
     )
     success.value = true
     form.value = { title: '', message: '' }

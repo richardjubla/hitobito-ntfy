@@ -54,10 +54,10 @@
 
         <article v-for="msg in visibleMessages" :key="msg.id" class="msg-card" :data-priority="msg.priority ?? 3">
           <div class="msg-header">
-            <span class="msg-title">{{ msg.title || 'Mitteilung' }}</span>
+            <span class="msg-title">{{ decryptedBodies.get(msg.id)?.title || msg.title || 'Mitteilung' }}</span>
             <span class="msg-time">{{ formatTime(msg.time) }}</span>
           </div>
-          <p class="msg-body">{{ decryptedBodies.get(msg.id) }}</p>
+          <p class="msg-body">{{ decryptedBodies.get(msg.id)?.text }}</p>
           <div v-if="msg.tags?.length" class="msg-tags">
             <span v-for="tag in msg.tags" :key="tag" class="tag">{{ tag }}</span>
           </div>
@@ -89,7 +89,7 @@ const messages = ref<NtfyMessage[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 const infoOpen = ref(false)
-const decryptedBodies = ref<Map<string, string>>(new Map())
+const decryptedBodies = ref<Map<string, { title: string; text: string }>>(new Map())
 const visibleMessages = computed(() =>
   messages.value.filter((m) => decryptedBodies.value.has(m.id)),
 )
@@ -186,8 +186,7 @@ onMounted(async () => {
   const urlPayload = route.query.m as string | undefined
   if (urlPayload && jublaEntry.value) {
     try {
-      const text = await decryptFromUrl(urlPayload, jublaEntry.value.signingKey, jublaEntry.value.encKey)
-      const title = decodeURIComponent((route.query.t as string | undefined) ?? '')
+      const { title, text } = await decryptFromUrl(urlPayload, jublaEntry.value.signingKey, jublaEntry.value.encKey)
       urlMessage.value = { title: title || 'Mitteilung', text }
     } catch {
       // Ungültiger oder manipulierter URL-Payload → ignorieren
@@ -204,7 +203,7 @@ onMounted(async () => {
   // Duplikat ausblenden falls die Mitteilung noch bei ntfy verfügbar ist
   if (urlMessage.value) {
     const txt = urlMessage.value.text
-    if ([...decryptedBodies.value.values()].some((v) => v === txt)) urlMessage.value = null
+    if ([...decryptedBodies.value.values()].some((v) => v.text === txt)) urlMessage.value = null
   }
 
   refreshTimer = setInterval(loadMessages, 30_000)

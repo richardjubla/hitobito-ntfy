@@ -14,7 +14,10 @@ async function jublaChecksum(b64: string): Promise<string> {
   return btoa(String.fromCharCode(hash[0], hash[1], hash[2]))
 }
 
+// Binary format: titleBytes + 0x00 + messageBytes
+// Backward compat: no 0x00 → old format (title = '')
 export async function encryptAndSign(
+  title: string,
   message: string,
   signingKey: Uint8Array,
   encKey: Uint8Array,
@@ -22,7 +25,14 @@ export async function encryptAndSign(
   const sodium = await getSodium()
   const { privateKey } = sodium.crypto_sign_seed_keypair(signingKey)
   const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES)
-  const ct = sodium.crypto_secretbox_easy(message, nonce, encKey)
+  const enc = new TextEncoder()
+  const titleBytes = enc.encode(title.replace(/\x00/g, ''))
+  const messageBytes = enc.encode(message)
+  const plaintext = new Uint8Array(titleBytes.length + 1 + messageBytes.length)
+  plaintext.set(titleBytes)
+  plaintext[titleBytes.length] = 0
+  plaintext.set(messageBytes, titleBytes.length + 1)
+  const ct = sodium.crypto_secretbox_easy(plaintext, nonce, encKey)
   const payload = new Uint8Array(nonce.length + ct.length)
   payload.set(nonce)
   payload.set(ct, nonce.length)
@@ -37,7 +47,7 @@ export async function verifyAndDecrypt(
   b64: string,
   signingKey: Uint8Array,
   encKey: Uint8Array,
-): Promise<string> {
+): Promise<{ title: string; text: string }> {
   const sodium = await getSodium()
   const { publicKey } = sodium.crypto_sign_seed_keypair(signingKey)
   const combined = sodium.from_base64(b64, sodium.base64_variants.URLSAFE_NO_PADDING)
@@ -49,7 +59,17 @@ export async function verifyAndDecrypt(
     throw new Error('Ungültige Signatur')
   }
   const pt = sodium.crypto_secretbox_open_easy(payload.slice(nonceLen), payload.slice(0, nonceLen), encKey)
-  return new TextDecoder().decode(pt).replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+  const dec = new TextDecoder()
+  const normalize = (s: string) => s.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+  const sep = pt.indexOf(0)
+  if (sep === -1) {
+    // old format without embedded title
+    return { title: '', text: normalize(dec.decode(pt)) }
+  }
+  return {
+    title: normalize(dec.decode(pt.slice(0, sep))),
+    text: normalize(dec.decode(pt.slice(sep + 1))),
+  }
 }
 
 function compress(data: Uint8Array): Uint8Array {
@@ -60,7 +80,9 @@ function decompress(data: Uint8Array): Uint8Array {
   return inflateSync(data)
 }
 
+// Payload format: "<title>\n<message>" — title cannot contain newlines
 export async function encryptForUrl(
+  title: string,
   message: string,
   signingKey: Uint8Array,
   encKey: Uint8Array,
@@ -68,7 +90,8 @@ export async function encryptForUrl(
   const sodium = await getSodium()
   const { privateKey } = sodium.crypto_sign_seed_keypair(signingKey)
   const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES)
-  const compressed = compress(new TextEncoder().encode(message))
+  const plaintext = `${title.replace(/\n/g, ' ')}\n${message}`
+  const compressed = compress(new TextEncoder().encode(plaintext))
   const ct = sodium.crypto_secretbox_easy(compressed, nonce, encKey)
   const payload = new Uint8Array(nonce.length + ct.length)
   payload.set(nonce)
@@ -84,7 +107,7 @@ export async function decryptFromUrl(
   b64: string,
   signingKey: Uint8Array,
   encKey: Uint8Array,
-): Promise<string> {
+): Promise<{ title: string; text: string }> {
   const sodium = await getSodium()
   const { publicKey } = sodium.crypto_sign_seed_keypair(signingKey)
   const combined = sodium.from_base64(b64, sodium.base64_variants.URLSAFE_NO_PADDING)
@@ -94,8 +117,11 @@ export async function decryptFromUrl(
   const sig = combined.slice(combined.length - sigLen)
   if (!sodium.crypto_sign_verify_detached(sig, payload, publicKey)) throw new Error('Ungültige Signatur')
   const compressed = sodium.crypto_secretbox_open_easy(payload.slice(nonceLen), payload.slice(0, nonceLen), encKey)
-  const decompressed = decompress(compressed)
-  return new TextDecoder().decode(decompressed).replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+  const decoded = new TextDecoder().decode(decompress(compressed)).replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+  const nl = decoded.indexOf('\n')
+  return nl === -1
+    ? { title: decoded, text: '' }
+    : { title: decoded.slice(0, nl), text: decoded.slice(nl + 1) }
 }
 
 // TOTP-style auth tag: HMAC-SHA256(encKey, 5-min-window) → first 8 bytes, base64url
